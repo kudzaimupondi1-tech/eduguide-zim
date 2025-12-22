@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Eye, EyeOff, GraduationCap, Mail, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const AuthPage = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,15 +19,57 @@ const AuthPage = () => {
     password: "",
   });
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        navigate("/");
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate("/");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (error) throw error;
+        toast.success("Welcome back!");
+        navigate("/");
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              full_name: formData.name,
+            },
+          },
+        });
+
+        if (error) throw error;
+        toast.success("Account created! Check your email to confirm.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Authentication failed");
+    } finally {
       setIsLoading(false);
-      toast.success(isLogin ? "Welcome back!" : "Account created successfully!");
-    }, 1500);
+    }
   };
 
   return (
