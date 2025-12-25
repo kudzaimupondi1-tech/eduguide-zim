@@ -51,19 +51,31 @@ const AuthPage = () => {
         toast.success("Welcome back!");
         navigate("/dashboard");
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${window.location.origin}/dashboard`,
             data: {
               full_name: formData.name,
             },
           },
         });
 
-        if (error) throw error;
-        toast.success("Account created! Check your email to confirm.");
+        if (error) {
+          if (error.message.includes("already registered")) {
+            throw new Error("This email is already registered. Please sign in instead.");
+          }
+          throw error;
+        }
+        
+        // With auto-confirm enabled, user is logged in immediately
+        if (data.session) {
+          toast.success("Account created successfully!");
+          navigate("/dashboard");
+        } else {
+          toast.success("Account created! Please check your email to confirm.");
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Authentication failed");
