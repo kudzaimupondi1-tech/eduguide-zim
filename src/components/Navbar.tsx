@@ -25,17 +25,11 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-6">
-            <Link to="/guidance" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Get Guidance
+            <Link to="/#about" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+              About
             </Link>
-            <Link to="/universities" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Universities
-            </Link>
-            <Link to="/careers" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Careers
-            </Link>
-            <Link to="/premium" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
-              Premium
+            <Link to="/#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+              How It Works
             </Link>
           </div>
 
@@ -45,7 +39,7 @@ const Navbar = () => {
               <Link to="/auth">Sign In</Link>
             </Button>
             <Button variant="hero" asChild>
-              <Link to="/guidance">Get Started</Link>
+              <Link to="/auth?mode=signup">Sign Up</Link>
             </Button>
           </div>
 
@@ -63,39 +57,25 @@ const Navbar = () => {
           <div className="md:hidden py-4 border-t border-border animate-fadeIn">
             <div className="flex flex-col gap-3">
               <Link
-                to="/guidance"
+                to="/#about"
                 className="px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Get Guidance
+                About
               </Link>
               <Link
-                to="/universities"
+                to="/#how-it-works"
                 className="px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Universities
-              </Link>
-              <Link
-                to="/careers"
-                className="px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Careers
-              </Link>
-              <Link
-                to="/premium"
-                className="px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Premium
+                How It Works
               </Link>
               <div className="flex gap-2 mt-2 px-4">
                 <Button variant="outline" className="flex-1" asChild>
                   <Link to="/auth">Sign In</Link>
                 </Button>
                 <Button variant="hero" className="flex-1" asChild>
-                  <Link to="/guidance">Get Started</Link>
+                  <Link to="/auth?mode=signup">Sign Up</Link>
                 </Button>
               </div>
             </div>

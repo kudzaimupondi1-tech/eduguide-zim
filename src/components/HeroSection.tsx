@@ -35,7 +35,7 @@ const HeroSection = () => {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 mb-8 animate-fadeUp">
             <GraduationCap className="w-4 h-4 text-secondary" />
             <span className="text-sm font-medium text-primary-foreground">
-              Zimbabwe's #1 Academic Guidance Platform
+              Zimbabwe's Academic Guidance Platform
             </span>
           </div>
 
@@ -54,14 +54,14 @@ const HeroSection = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fadeUp delay-300">
             <Button variant="hero" size="xl" asChild>
-              <Link to="/guidance" className="group">
-                Start Your Journey
+              <Link to="/auth?mode=signup" className="group">
+                Get Started Free
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
             <Button variant="heroOutline" size="xl" asChild>
-              <Link to="/universities">
-                Explore Universities
+              <Link to="/auth">
+                Sign In
               </Link>
             </Button>
           </div>
