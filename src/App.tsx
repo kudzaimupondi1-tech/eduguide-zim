@@ -10,6 +10,7 @@ import MySubjects from "./pages/MySubjects";
 import Recommendations from "./pages/Recommendations";
 import ProfilePage from "./pages/ProfilePage";
 import UniversitiesPage from "./pages/UniversitiesPage";
+import UniversityDetailPage from "./pages/UniversityDetailPage";
 import CareersPage from "./pages/CareersPage";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/universities" element={<UniversitiesPage />} />
+          <Route path="/universities/:id" element={<UniversityDetailPage />} />
           <Route path="/careers" element={<CareersPage />} />
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminDashboard />} />

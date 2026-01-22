@@ -275,39 +275,104 @@ export type Database = {
       }
       universities: {
         Row: {
+          accreditation: string | null
+          admission_requirements: Json | null
+          contact_info: Json | null
           created_at: string
           description: string | null
+          established_year: number | null
+          faculties: Json | null
           id: string
           is_active: boolean | null
           location: string | null
           logo_url: string | null
           name: string
+          programs_count: number | null
+          short_name: string | null
+          type: string | null
           updated_at: string
           website: string | null
         }
         Insert: {
+          accreditation?: string | null
+          admission_requirements?: Json | null
+          contact_info?: Json | null
           created_at?: string
           description?: string | null
+          established_year?: number | null
+          faculties?: Json | null
           id?: string
           is_active?: boolean | null
           location?: string | null
           logo_url?: string | null
           name: string
+          programs_count?: number | null
+          short_name?: string | null
+          type?: string | null
           updated_at?: string
           website?: string | null
         }
         Update: {
+          accreditation?: string | null
+          admission_requirements?: Json | null
+          contact_info?: Json | null
           created_at?: string
           description?: string | null
+          established_year?: number | null
+          faculties?: Json | null
           id?: string
           is_active?: boolean | null
           location?: string | null
           logo_url?: string | null
           name?: string
+          programs_count?: number | null
+          short_name?: string | null
+          type?: string | null
           updated_at?: string
           website?: string | null
         }
         Relationships: []
+      }
+      university_images: {
+        Row: {
+          created_at: string
+          extracted_info: Json | null
+          id: string
+          image_type: string | null
+          image_url: string
+          title: string | null
+          university_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          extracted_info?: Json | null
+          id?: string
+          image_type?: string | null
+          image_url: string
+          title?: string | null
+          university_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          extracted_info?: Json | null
+          id?: string
+          image_type?: string | null
+          image_url?: string
+          title?: string | null
+          university_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "university_images_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
