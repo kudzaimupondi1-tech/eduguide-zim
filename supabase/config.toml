@@ -1,1 +1,10 @@
 project_id = "ypoqdlsiwpwzagolvhox"
+
+[functions.extract-image-info]
+verify_jwt = false
+
+[functions.career-guidance]
+verify_jwt = false
+
+[functions.student-chatbot]
+verify_jwt = false

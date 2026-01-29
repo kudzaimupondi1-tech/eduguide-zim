@@ -226,18 +226,18 @@ const Dashboard = () => {
             </Card>
           </Link>
 
-          <Link to="/careers">
+          <Link to="/career-guidance">
             <Card className="group hover:shadow-lg transition-all cursor-pointer border-destructive/20 hover:border-destructive/40">
               <CardContent className="pt-6">
                 <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <TrendingUp className="w-6 h-6 text-destructive" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-1">Career Paths</h3>
+                <h3 className="font-semibold text-foreground mb-1">AI Career Guidance</h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Discover careers
+                  Get personalized advice
                 </p>
                 <div className="flex items-center text-destructive text-sm font-medium">
-                  Explore Careers
+                  Get Recommendations
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
               </CardContent>

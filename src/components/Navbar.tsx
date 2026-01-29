@@ -1,9 +1,11 @@
-import { GraduationCap, Menu, X } from "lucide-react";
+import { GraduationCap, Menu, X, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 
 const Navbar = () => {
+  const { isAdmin } = useAdminCheck();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -31,6 +33,12 @@ const Navbar = () => {
             <Link to="/#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
               How It Works
             </Link>
+            {isAdmin && (
+              <Link to="/admin" className="text-primary hover:text-primary/80 transition-colors font-medium flex items-center gap-1">
+                <Shield className="w-4 h-4" />
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Auth Buttons */}
@@ -70,6 +78,16 @@ const Navbar = () => {
               >
                 How It Works
               </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="px-4 py-2 text-primary hover:bg-muted rounded-lg transition-colors flex items-center gap-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Shield className="w-4 h-4" />
+                  Admin Panel
+                </Link>
+              )}
               <div className="flex gap-2 mt-2 px-4">
                 <Button variant="outline" className="flex-1" asChild>
                   <Link to="/auth">Sign In</Link>

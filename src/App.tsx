@@ -12,6 +12,7 @@ import ProfilePage from "./pages/ProfilePage";
 import UniversitiesPage from "./pages/UniversitiesPage";
 import UniversityDetailPage from "./pages/UniversityDetailPage";
 import CareersPage from "./pages/CareersPage";
+import CareerGuidancePage from "./pages/CareerGuidancePage";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUniversities from "./pages/admin/AdminUniversities";
@@ -19,6 +20,7 @@ import AdminPrograms from "./pages/admin/AdminPrograms";
 import AdminSubjects from "./pages/admin/AdminSubjects";
 import AdminCareers from "./pages/admin/AdminCareers";
 import AdminUsers from "./pages/admin/AdminUsers";
+import { StudentChatbot } from "./components/StudentChatbot";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +40,7 @@ const App = () => (
           <Route path="/universities" element={<UniversitiesPage />} />
           <Route path="/universities/:id" element={<UniversityDetailPage />} />
           <Route path="/careers" element={<CareersPage />} />
+          <Route path="/career-guidance" element={<CareerGuidancePage />} />
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/universities" element={<AdminUniversities />} />
@@ -48,6 +51,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <StudentChatbot />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
