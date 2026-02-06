@@ -8,6 +8,12 @@ import {
   Users,
   Settings,
   LogOut,
+  Brain,
+  Megaphone,
+  Calendar,
+  BarChart3,
+  Layers,
+  Hash,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,13 +31,23 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
-const menuItems = [
+const dataMenuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Universities", url: "/admin/universities", icon: Building2 },
   { title: "Programs", url: "/admin/programs", icon: GraduationCap },
   { title: "Subjects", url: "/admin/subjects", icon: BookOpen },
+  { title: "Combinations", url: "/admin/combinations", icon: Layers },
+  { title: "Grading", url: "/admin/grading", icon: Hash },
   { title: "Careers", url: "/admin/careers", icon: Briefcase },
+];
+
+const systemMenuItems = [
+  { title: "AI Config", url: "/admin/ai-config", icon: Brain },
+  { title: "Announcements", url: "/admin/announcements", icon: Megaphone },
+  { title: "Deadlines", url: "/admin/deadlines", icon: Calendar },
+  { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
   { title: "Users", url: "/admin/users", icon: Users },
+  { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -41,6 +57,27 @@ export function AdminSidebar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const renderMenuItem = (item: { title: string; url: string; icon: any }) => {
+    const isActive = location.pathname === item.url;
+    return (
+      <SidebarMenuItem key={item.title}>
+        <SidebarMenuButton asChild>
+          <Link
+            to={item.url}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+              isActive
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+            }`}
+          >
+            <item.icon className="w-5 h-5" />
+            <span>{item.title}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
   };
 
   return (
@@ -57,31 +94,21 @@ export function AdminSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50">Management</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/50">Data Management</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <Link
-                        to={item.url}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                          isActive
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                        }`}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {dataMenuItems.map(renderMenuItem)}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-sidebar-foreground/50">System</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {systemMenuItems.map(renderMenuItem)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -89,10 +116,10 @@ export function AdminSidebar() {
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className="flex flex-col gap-2">
-          <Link to="/">
+          <Link to="/dashboard">
             <Button variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50">
-              <Settings className="w-4 h-4 mr-2" />
-              Back to Site
+              <GraduationCap className="w-4 h-4 mr-2" />
+              Student View
             </Button>
           </Link>
           <Button 

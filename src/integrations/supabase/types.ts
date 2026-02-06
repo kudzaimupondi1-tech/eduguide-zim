@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_config: {
+        Row: {
+          config_key: string
+          config_value: Json
+          created_at: string
+          description: string | null
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      analytics_logs: {
+        Row: {
+          created_at: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_published: boolean | null
+          priority: string | null
+          published_at: string | null
+          target_audience: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          priority?: string | null
+          published_at?: string | null
+          target_audience?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          priority?: string | null
+          published_at?: string | null
+          target_audience?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       careers: {
         Row: {
           created_at: string
@@ -47,6 +146,83 @@ export type Database = {
           name?: string
           salary_range?: string | null
           skills_required?: string[] | null
+        }
+        Relationships: []
+      }
+      deadlines: {
+        Row: {
+          created_at: string
+          deadline_date: string
+          deadline_type: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          level: string | null
+          title: string
+          university_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deadline_date: string
+          deadline_type?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          level?: string | null
+          title: string
+          university_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deadline_date?: string
+          deadline_type?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          level?: string | null
+          title?: string
+          university_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deadlines_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grading_structures: {
+        Row: {
+          created_at: string
+          grades: Json
+          id: string
+          is_active: boolean | null
+          level: string
+          name: string
+          pass_threshold: string | null
+        }
+        Insert: {
+          created_at?: string
+          grades?: Json
+          id?: string
+          is_active?: boolean | null
+          level: string
+          name: string
+          pass_threshold?: string | null
+        }
+        Update: {
+          created_at?: string
+          grades?: Json
+          id?: string
+          is_active?: boolean | null
+          level?: string
+          name?: string
+          pass_threshold?: string | null
         }
         Relationships: []
       }
@@ -205,6 +381,39 @@ export type Database = {
           },
         ]
       }
+      student_notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          notification_type: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          notification_type?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          notification_type?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       student_subjects: {
         Row: {
           created_at: string
@@ -240,6 +449,42 @@ export type Database = {
           },
         ]
       }
+      subject_combinations: {
+        Row: {
+          career_paths: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          level: string
+          name: string
+          subjects: Json
+          updated_at: string
+        }
+        Insert: {
+          career_paths?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          level?: string
+          name: string
+          subjects?: Json
+          updated_at?: string
+        }
+        Update: {
+          career_paths?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          level?: string
+          name?: string
+          subjects?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           category: string | null
@@ -270,6 +515,39 @@ export type Database = {
           is_active?: boolean | null
           level?: string
           name?: string
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }

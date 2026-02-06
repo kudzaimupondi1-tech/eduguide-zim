@@ -1,0 +1,263 @@
+import { AdminLayout } from "@/components/admin/AdminLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Settings, Shield, Database, Bell, Save } from "lucide-react";
+
+interface SystemSettings {
+  maintenance_mode: boolean;
+  allow_registration: boolean;
+  require_email_verification: boolean;
+  max_subjects_per_student: number;
+  notification_email: string;
+  backup_frequency: string;
+}
+
+export default function AdminSettings() {
+  const [settings, setSettings] = useState<SystemSettings>({
+    maintenance_mode: false,
+    allow_registration: true,
+    require_email_verification: true,
+    max_subjects_per_student: 10,
+    notification_email: "",
+    backup_frequency: "daily",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("system_settings")
+        .select("*");
+
+      if (error) throw error;
+
+      const settingsMap: Record<string, any> = {};
+      data?.forEach((item: any) => {
+        settingsMap[item.setting_key] = item.setting_value;
+      });
+
+      setSettings({
+        maintenance_mode: settingsMap.maintenance_mode?.enabled || false,
+        allow_registration: settingsMap.registration?.enabled ?? true,
+        require_email_verification: settingsMap.registration?.require_verification ?? true,
+        max_subjects_per_student: settingsMap.student_limits?.max_subjects || 10,
+        notification_email: settingsMap.notifications?.admin_email || "",
+        backup_frequency: settingsMap.backup?.frequency || "daily",
+      });
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const settingsToSave = [
+        { setting_key: "maintenance_mode", setting_value: { enabled: settings.maintenance_mode }, category: "system" },
+        { setting_key: "registration", setting_value: { enabled: settings.allow_registration, require_verification: settings.require_email_verification }, category: "auth" },
+        { setting_key: "student_limits", setting_value: { max_subjects: settings.max_subjects_per_student }, category: "limits" },
+        { setting_key: "notifications", setting_value: { admin_email: settings.notification_email }, category: "notifications" },
+        { setting_key: "backup", setting_value: { frequency: settings.backup_frequency }, category: "system" },
+      ];
+
+      for (const setting of settingsToSave) {
+        const { error } = await supabase
+          .from("system_settings")
+          .upsert(setting, { onConflict: "setting_key" });
+        if (error) throw error;
+      }
+
+      toast.success("Settings saved successfully");
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      toast.error("Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">System Settings</h1>
+            <p className="text-muted-foreground mt-1">Configure system-wide settings and preferences</p>
+          </div>
+          <Button onClick={handleSave} disabled={isSaving}>
+            <Save className="w-4 h-4 mr-2" />
+            {isSaving ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+
+        <Tabs defaultValue="general" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="general" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              General
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <Shield className="w-4 h-4" />
+              Security
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="w-4 h-4" />
+              Notifications
+            </TabsTrigger>
+            <TabsTrigger value="database" className="flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              Database
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle>General Settings</CardTitle>
+                <CardDescription>Basic system configuration</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+                  <div>
+                    <Label className="text-destructive font-medium">Maintenance Mode</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      When enabled, only admins can access the system
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.maintenance_mode}
+                    onCheckedChange={(checked) => setSettings({ ...settings, maintenance_mode: checked })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Maximum Subjects per Student</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={settings.max_subjects_per_student}
+                    onChange={(e) => setSettings({ ...settings, max_subjects_per_student: parseInt(e.target.value) })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Maximum number of subjects a student can add to their profile
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Security Settings</CardTitle>
+                <CardDescription>Authentication and access control</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label>Allow New Registrations</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Allow new users to create accounts
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.allow_registration}
+                    onCheckedChange={(checked) => setSettings({ ...settings, allow_registration: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <Label>Require Email Verification</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Users must verify their email before accessing the system
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings.require_email_verification}
+                    onCheckedChange={(checked) => setSettings({ ...settings, require_email_verification: checked })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Settings</CardTitle>
+                <CardDescription>Configure system notifications</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Admin Notification Email</Label>
+                  <Input
+                    type="email"
+                    value={settings.notification_email}
+                    onChange={(e) => setSettings({ ...settings, notification_email: e.target.value })}
+                    placeholder="admin@eduguide.co.zw"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Email address for system notifications and alerts
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="database">
+            <Card>
+              <CardHeader>
+                <CardTitle>Database Settings</CardTitle>
+                <CardDescription>Backup and data management</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Database Status</Label>
+                      <p className="text-sm text-muted-foreground mt-1">Connected and operational</p>
+                    </div>
+                    <span className="flex items-center gap-2 text-accent">
+                      <span className="w-2 h-2 rounded-full bg-accent"></span>
+                      Online
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Storage Usage</Label>
+                      <p className="text-sm text-muted-foreground mt-1">University images and documents</p>
+                    </div>
+                    <span className="text-muted-foreground">Active</span>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <p className="text-sm text-primary">
+                    💡 Tip: Database backups are managed automatically by Lovable Cloud. 
+                    Contact support for manual backup requests.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AdminLayout>
+  );
+}

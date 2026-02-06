@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, GraduationCap, Mail, Lock, User } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, Mail, Lock, User, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,24 +18,43 @@ const AuthPage = () => {
     name: "",
     email: "",
     password: "",
+    role: "student" as "student" | "admin",
   });
 
   // Check if user is already logged in
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        navigate("/dashboard");
+        await redirectBasedOnRole(session.user.id);
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        navigate("/dashboard");
+        await redirectBasedOnRole(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const redirectBasedOnRole = async (userId: string) => {
+    try {
+      const { data: hasAdminRole } = await supabase.rpc("has_role", {
+        _user_id: userId,
+        _role: "admin",
+      });
+
+      if (hasAdminRole) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      console.error("Error checking role:", error);
+      navigate("/dashboard");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,14 +62,17 @@ const AuthPage = () => {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
 
         if (error) throw error;
         toast.success("Welcome back!");
-        navigate("/dashboard");
+        
+        if (data.user) {
+          await redirectBasedOnRole(data.user.id);
+        }
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
@@ -58,6 +81,7 @@ const AuthPage = () => {
             emailRedirectTo: `${window.location.origin}/dashboard`,
             data: {
               full_name: formData.name,
+              selected_role: formData.role,
             },
           },
         });
@@ -72,7 +96,13 @@ const AuthPage = () => {
         // With auto-confirm enabled, user is logged in immediately
         if (data.session) {
           toast.success("Account created successfully!");
-          navigate("/dashboard");
+          
+          // If they selected admin role, we need to inform them about approval
+          if (formData.role === "admin") {
+            toast.info("Admin access requires approval. You've been registered as a student for now.");
+          }
+          
+          await redirectBasedOnRole(data.user!.id);
         } else {
           toast.success("Account created! Please check your email to confirm.");
         }
@@ -117,21 +147,57 @@ const AuthPage = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    className="pl-10"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required={!isLogin}
-                  />
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      className="pl-10"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required={!isLogin}
+                    />
+                  </div>
                 </div>
-              </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="role">I am a</Label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
+                    <Select 
+                      value={formData.role} 
+                      onValueChange={(value: "student" | "admin") => setFormData({ ...formData, role: value })}
+                    >
+                      <SelectTrigger className="pl-10">
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="student">
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="w-4 h-4" />
+                            Student
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="admin">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            Administrator
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {formData.role === "admin" && (
+                    <p className="text-xs text-muted-foreground">
+                      Note: Admin access requires approval from an existing administrator.
+                    </p>
+                  )}
+                </div>
+              </>
             )}
 
             <div className="space-y-2">
@@ -206,16 +272,6 @@ const AuthPage = () => {
               {isLogin ? "Sign up" : "Sign in"}
             </button>
           </p>
-
-          {/* Admin Link */}
-          <div className="mt-8 pt-8 border-t border-border text-center">
-            <Link 
-              to="/admin" 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Admin Login →
-            </Link>
-          </div>
         </div>
       </div>
 
