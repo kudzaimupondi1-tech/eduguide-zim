@@ -28,11 +28,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Loader2, BookOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, BookOpen, Upload, Download, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useExcelImportExport, ExcelColumn } from "@/hooks/useExcelImportExport";
 
 interface University {
   id: string;
@@ -64,6 +65,19 @@ interface ProgramSubject {
   minimum_grade: string | null;
 }
 
+const GRADES = ["A*", "A", "B", "C", "D", "E"];
+
+const programColumns: ExcelColumn[] = [
+  { key: "name", header: "Program Name", required: true },
+  { key: "university_name", header: "University Name", required: true },
+  { key: "faculty", header: "Faculty" },
+  { key: "degree_type", header: "Degree Type" },
+  { key: "description", header: "Description" },
+  { key: "entry_requirements", header: "Entry Requirements" },
+  { key: "duration_years", header: "Duration (Years)" },
+  { key: "subject_requirements", header: "Subject Requirements (e.g., Mathematics:B, Physics:C)" },
+];
+
 export default function AdminPrograms() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [universities, setUniversities] = useState<University[]>([]);
@@ -75,7 +89,9 @@ export default function AdminPrograms() {
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [programSubjects, setProgramSubjects] = useState<ProgramSubject[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { exportToExcel, importFromExcel, downloadTemplate, isImporting, isExporting } = useExcelImportExport();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -179,6 +195,9 @@ export default function AdminPrograms() {
     if (!confirm("Are you sure you want to delete this program?")) return;
 
     try {
+      // Delete program subjects first
+      await supabase.from("program_subjects").delete().eq("program_id", id);
+      
       const { error } = await supabase.from("programs").delete().eq("id", id);
       if (error) throw error;
       toast({ title: "Success", description: "Program deleted successfully" });
@@ -296,147 +315,260 @@ export default function AdminPrograms() {
     });
   };
 
+  const handleExport = async () => {
+    // Fetch program subjects for export
+    const { data: programSubjectsData } = await supabase
+      .from("program_subjects")
+      .select("program_id, minimum_grade, subjects(name)");
+
+    const exportData = programs.map((p) => {
+      const subjectReqs = programSubjectsData
+        ?.filter((ps) => ps.program_id === p.id)
+        .map((ps) => `${ps.subjects?.name}:${ps.minimum_grade || 'C'}`)
+        .join(", ") || "";
+
+      return {
+        name: p.name,
+        university_name: p.universities?.name || "",
+        faculty: p.faculty || "",
+        degree_type: p.degree_type || "",
+        description: p.description || "",
+        entry_requirements: p.entry_requirements || "",
+        duration_years: p.duration_years || 4,
+        subject_requirements: subjectReqs,
+      };
+    });
+
+    exportToExcel(exportData, programColumns, "programs");
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await importFromExcel(file, programColumns, async (data) => {
+      for (const row of data) {
+        // Find university by name
+        const university = universities.find(
+          (u) => u.name.toLowerCase() === (row.university_name as string)?.toLowerCase()
+        );
+        
+        if (!university) {
+          console.warn(`University not found: ${row.university_name}`);
+          continue;
+        }
+
+        // Insert program
+        const { data: programData, error: programError } = await supabase
+          .from("programs")
+          .insert({
+            name: row.name as string,
+            university_id: university.id,
+            faculty: (row.faculty as string) || null,
+            degree_type: (row.degree_type as string) || null,
+            description: (row.description as string) || null,
+            entry_requirements: (row.entry_requirements as string) || null,
+            duration_years: Number(row.duration_years) || 4,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (programError) {
+          console.error("Error inserting program:", programError);
+          continue;
+        }
+
+        // Parse and insert subject requirements
+        const subjectReqsStr = row.subject_requirements as string;
+        if (subjectReqsStr && programData) {
+          const subjectReqs = subjectReqsStr.split(",").map((s) => s.trim());
+          for (const req of subjectReqs) {
+            const [subjectName, grade] = req.split(":").map((s) => s.trim());
+            const subject = subjects.find(
+              (s) => s.name.toLowerCase() === subjectName?.toLowerCase()
+            );
+            if (subject) {
+              await supabase.from("program_subjects").insert({
+                program_id: programData.id,
+                subject_id: subject.id,
+                is_required: true,
+                minimum_grade: grade || "C",
+              });
+            }
+          }
+        }
+      }
+      fetchData();
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const aLevelSubjects = subjects.filter((s) => s.level === "A-Level");
 
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">Programs</h1>
             <p className="text-muted-foreground mt-1">
-              Manage university programs and their requirements
+              Manage university programs and their subject requirements
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Program
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingProgram ? "Edit Program" : "Add Program"}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={() => downloadTemplate(programColumns, "programs")}>
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Template
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+              <Upload className="w-4 h-4 mr-2" />
+              Import
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImport}
+              className="hidden"
+            />
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Program
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingProgram ? "Edit Program" : "Add Program"}
+                  </DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Program Name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="university">University *</Label>
+                      <Select
+                        value={formData.university_id}
+                        onValueChange={(value) => setFormData({ ...formData, university_id: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select university" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {universities.map((uni) => (
+                            <SelectItem key={uni.id} value={uni.id}>
+                              {uni.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="faculty">Faculty</Label>
+                      <Input
+                        id="faculty"
+                        value={formData.faculty}
+                        onChange={(e) => setFormData({ ...formData, faculty: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="degree_type">Degree Type</Label>
+                      <Select
+                        value={formData.degree_type}
+                        onValueChange={(value) => setFormData({ ...formData, degree_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select degree type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Bachelor">Bachelor</SelectItem>
+                          <SelectItem value="Honours">Honours</SelectItem>
+                          <SelectItem value="Diploma">Diploma</SelectItem>
+                          <SelectItem value="Certificate">Certificate</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="name">Program Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={3}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="university">University *</Label>
-                    <Select
-                      value={formData.university_id}
-                      onValueChange={(value) => setFormData({ ...formData, university_id: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select university" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {universities.map((uni) => (
-                          <SelectItem key={uni.id} value={uni.id}>
-                            {uni.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="faculty">Faculty</Label>
-                    <Input
-                      id="faculty"
-                      value={formData.faculty}
-                      onChange={(e) => setFormData({ ...formData, faculty: e.target.value })}
+                    <Label htmlFor="entry_requirements">Entry Requirements</Label>
+                    <Textarea
+                      id="entry_requirements"
+                      value={formData.entry_requirements}
+                      onChange={(e) => setFormData({ ...formData, entry_requirements: e.target.value })}
+                      rows={2}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="degree_type">Degree Type</Label>
-                    <Select
-                      value={formData.degree_type}
-                      onValueChange={(value) => setFormData({ ...formData, degree_type: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select degree type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Bachelor">Bachelor</SelectItem>
-                        <SelectItem value="Honours">Honours</SelectItem>
-                        <SelectItem value="Diploma">Diploma</SelectItem>
-                        <SelectItem value="Certificate">Certificate</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="duration_years">Duration (Years)</Label>
+                      <Input
+                        id="duration_years"
+                        type="number"
+                        min="1"
+                        max="8"
+                        value={formData.duration_years}
+                        onChange={(e) => setFormData({ ...formData, duration_years: parseInt(e.target.value) })}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 pt-6">
+                      <Switch
+                        id="is_active"
+                        checked={formData.is_active}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                      />
+                      <Label htmlFor="is_active">Active</Label>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="entry_requirements">Entry Requirements</Label>
-                  <Textarea
-                    id="entry_requirements"
-                    value={formData.entry_requirements}
-                    onChange={(e) => setFormData({ ...formData, entry_requirements: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="duration_years">Duration (Years)</Label>
-                    <Input
-                      id="duration_years"
-                      type="number"
-                      min="1"
-                      max="8"
-                      value={formData.duration_years}
-                      onChange={(e) => setFormData({ ...formData, duration_years: parseInt(e.target.value) })}
-                    />
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting || !formData.university_id}>
+                      {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {editingProgram ? "Update" : "Add"} Program
+                    </Button>
                   </div>
-                  <div className="flex items-center gap-2 pt-6">
-                    <Switch
-                      id="is_active"
-                      checked={formData.is_active}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                    />
-                    <Label htmlFor="is_active">Active</Label>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting || !formData.university_id}>
-                    {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {editingProgram ? "Update" : "Add"} Program
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Subjects Dialog */}
@@ -449,7 +581,7 @@ export default function AdminPrograms() {
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Select A-Level subjects required for this program:
+                Select A-Level subjects required for this program and set minimum grades:
               </p>
               <div className="grid gap-2 max-h-[400px] overflow-y-auto">
                 {aLevelSubjects.map((subject) => {
@@ -457,7 +589,7 @@ export default function AdminPrograms() {
                   return (
                     <div
                       key={subject.id}
-                      className="flex items-center gap-4 p-3 border rounded-lg"
+                      className={`flex items-center gap-4 p-3 border rounded-lg transition-colors ${ps ? 'bg-primary/5 border-primary/30' : ''}`}
                     >
                       <Checkbox
                         checked={!!ps}
@@ -467,7 +599,7 @@ export default function AdminPrograms() {
                       {ps && (
                         <>
                           <div className="flex items-center gap-2">
-                            <Label className="text-sm">Required:</Label>
+                            <Label className="text-sm whitespace-nowrap">Required:</Label>
                             <Switch
                               checked={ps.is_required}
                               onCheckedChange={(checked) =>
@@ -476,7 +608,7 @@ export default function AdminPrograms() {
                             />
                           </div>
                           <div className="flex items-center gap-2">
-                            <Label className="text-sm">Min Grade:</Label>
+                            <Label className="text-sm whitespace-nowrap">Min Grade:</Label>
                             <Select
                               value={ps.minimum_grade || "C"}
                               onValueChange={(value) =>
@@ -487,7 +619,7 @@ export default function AdminPrograms() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {["A", "B", "C", "D", "E"].map((grade) => (
+                                {GRADES.map((grade) => (
                                   <SelectItem key={grade} value={grade}>
                                     {grade}
                                   </SelectItem>
@@ -548,7 +680,7 @@ export default function AdminPrograms() {
                           <Badge variant="outline">{program.degree_type}</Badge>
                         )}
                       </TableCell>
-                      <TableCell>{program.duration_years} years</TableCell>
+                      <TableCell>{program.duration_years ? `${program.duration_years} years` : "-"}</TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
@@ -561,12 +693,12 @@ export default function AdminPrograms() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => openSubjectsDialog(program)}
-                            title="Manage subjects"
+                            title="Manage subject requirements"
                           >
                             <BookOpen className="w-4 h-4" />
                           </Button>
