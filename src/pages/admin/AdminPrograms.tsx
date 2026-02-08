@@ -347,6 +347,9 @@ export default function AdminPrograms() {
     if (!file) return;
 
     await importFromExcel(file, programColumns, async (data) => {
+      let addedCount = 0;
+      let updatedCount = 0;
+
       for (const row of data) {
         // Find university by name
         const university = universities.find(
@@ -358,30 +361,71 @@ export default function AdminPrograms() {
           continue;
         }
 
-        // Insert program
-        const { data: programData, error: programError } = await supabase
-          .from("programs")
-          .insert({
-            name: row.name as string,
-            university_id: university.id,
-            faculty: (row.faculty as string) || null,
-            degree_type: (row.degree_type as string) || null,
-            description: (row.description as string) || null,
-            entry_requirements: (row.entry_requirements as string) || null,
-            duration_years: Number(row.duration_years) || 4,
-            is_active: true,
-          })
-          .select()
-          .single();
+        // Check if program already exists (same name + same university)
+        const existingProgram = programs.find(
+          (p) => 
+            p.name.toLowerCase() === (row.name as string)?.toLowerCase() &&
+            p.university_id === university.id
+        );
 
-        if (programError) {
-          console.error("Error inserting program:", programError);
-          continue;
+        let programId: string;
+
+        if (existingProgram) {
+          // Update existing program
+          const { error: updateError } = await supabase
+            .from("programs")
+            .update({
+              faculty: (row.faculty as string) || null,
+              degree_type: (row.degree_type as string) || null,
+              description: (row.description as string) || null,
+              entry_requirements: (row.entry_requirements as string) || null,
+              duration_years: Number(row.duration_years) || 4,
+              is_active: true,
+            })
+            .eq("id", existingProgram.id);
+
+          if (updateError) {
+            console.error("Error updating program:", updateError);
+            continue;
+          }
+          
+          programId = existingProgram.id;
+          updatedCount++;
+
+          // Delete existing subject requirements for this program
+          await supabase
+            .from("program_subjects")
+            .delete()
+            .eq("program_id", programId);
+        } else {
+          // Insert new program
+          const { data: programData, error: programError } = await supabase
+            .from("programs")
+            .insert({
+              name: row.name as string,
+              university_id: university.id,
+              faculty: (row.faculty as string) || null,
+              degree_type: (row.degree_type as string) || null,
+              description: (row.description as string) || null,
+              entry_requirements: (row.entry_requirements as string) || null,
+              duration_years: Number(row.duration_years) || 4,
+              is_active: true,
+            })
+            .select()
+            .single();
+
+          if (programError) {
+            console.error("Error inserting program:", programError);
+            continue;
+          }
+          
+          programId = programData.id;
+          addedCount++;
         }
 
         // Parse and insert subject requirements
         const subjectReqsStr = row.subject_requirements as string;
-        if (subjectReqsStr && programData) {
+        if (subjectReqsStr) {
           const subjectReqs = subjectReqsStr.split(",").map((s) => s.trim());
           for (const req of subjectReqs) {
             const [subjectName, grade] = req.split(":").map((s) => s.trim());
@@ -390,7 +434,7 @@ export default function AdminPrograms() {
             );
             if (subject) {
               await supabase.from("program_subjects").insert({
-                program_id: programData.id,
+                program_id: programId,
                 subject_id: subject.id,
                 is_required: true,
                 minimum_grade: grade || "C",
@@ -399,6 +443,12 @@ export default function AdminPrograms() {
           }
         }
       }
+
+      toast({
+        title: "Import Complete",
+        description: `Added ${addedCount} new programs, updated ${updatedCount} existing programs`,
+      });
+      
       fetchData();
     });
 
