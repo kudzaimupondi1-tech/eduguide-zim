@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageUrl } = await req.json();
+    const { imageUrl, extractionType } = await req.json();
     
     if (!imageUrl) {
       return new Response(
@@ -25,6 +25,153 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    let systemPrompt = "";
+    let userPrompt = "";
+    let toolDef: any = {};
+
+    if (extractionType === "programs") {
+      systemPrompt = `You are an expert at extracting degree programme information from Zimbabwean university documents/images. 
+Extract ALL degree programmes visible in the image with their faculty, programme name, and entry requirements exactly as shown.
+Return structured data for each programme found.`;
+      userPrompt = `Analyze this university document image and extract ALL degree programmes. For each programme found, extract:
+- faculty: The faculty/school name (e.g., "Business & Economic Sciences", "Communication and Information Science")
+- name: The full degree programme name (e.g., "Bachelor of Commerce Honours Degree in Accounting")
+- entry_requirements: The full entry requirements text exactly as shown
+- degree_type: The degree type (Bachelor, Honours, Diploma, Certificate)
+
+Return ALL programmes found in the image as an array.`;
+      toolDef = {
+        type: "function",
+        function: {
+          name: "extract_programs",
+          description: "Extract degree programmes from university document image",
+          parameters: {
+            type: "object",
+            properties: {
+              university_name: { type: "string", description: "Name of the university if visible" },
+              programs: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    faculty: { type: "string", description: "Faculty or school name" },
+                    name: { type: "string", description: "Full degree programme name" },
+                    entry_requirements: { type: "string", description: "Full entry requirements text" },
+                    degree_type: { type: "string", description: "Degree type (Bachelor, Honours, Diploma, Certificate)" },
+                    duration_years: { type: "integer", description: "Duration in years if mentioned" }
+                  },
+                  required: ["name"]
+                }
+              }
+            },
+            required: ["programs"]
+          }
+        }
+      };
+    } else if (extractionType === "careers") {
+      systemPrompt = `You are an expert at extracting career information from documents/images related to Zimbabwean education and employment.
+Extract all career paths, job roles, or professional fields visible in the image.`;
+      userPrompt = `Analyze this image and extract all career/job information. For each career found, extract:
+- name: Career/job title
+- field: The sector or field (e.g., Healthcare, Engineering, Finance)
+- description: Brief description if available
+- skills_required: Required skills as a list
+- salary_range: Salary information if available
+- job_outlook: Job market outlook if mentioned`;
+      toolDef = {
+        type: "function",
+        function: {
+          name: "extract_careers",
+          description: "Extract career information from image",
+          parameters: {
+            type: "object",
+            properties: {
+              careers: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    field: { type: "string" },
+                    description: { type: "string" },
+                    skills_required: { type: "array", items: { type: "string" } },
+                    salary_range: { type: "string" },
+                    job_outlook: { type: "string" }
+                  },
+                  required: ["name"]
+                }
+              }
+            },
+            required: ["careers"]
+          }
+        }
+      };
+    } else if (extractionType === "combinations") {
+      systemPrompt = `You are an expert at extracting A-Level subject combination information from Zimbabwean education documents.
+Extract all subject combinations visible in the image.`;
+      userPrompt = `Analyze this image and extract all A-Level subject combinations. For each combination found, extract:
+- name: Combination name (e.g., "Sciences", "Commercials")
+- subjects: List of subjects in this combination
+- career_paths: Related career paths if mentioned
+- description: Any description provided`;
+      toolDef = {
+        type: "function",
+        function: {
+          name: "extract_combinations",
+          description: "Extract subject combinations from image",
+          parameters: {
+            type: "object",
+            properties: {
+              combinations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    subjects: { type: "array", items: { type: "string" } },
+                    career_paths: { type: "array", items: { type: "string" } },
+                    description: { type: "string" }
+                  },
+                  required: ["name", "subjects"]
+                }
+              }
+            },
+            required: ["combinations"]
+          }
+        }
+      };
+    } else {
+      // Default: university info extraction (original behavior)
+      systemPrompt = `You are an expert at extracting structured information from university-related images. 
+Analyze the image and extract relevant information about the university.`;
+      userPrompt = `Please analyze this university image and extract all relevant information. Return a JSON object with the following structure: { name, shortName, location, description, faculties (array), programs (array), admissionRequirements (object), contactInfo (object with phone, email, address), fees (object), accreditation, establishedYear, importantDates (array), otherInfo }. Only include fields where you can extract actual information from the image.`;
+      toolDef = {
+        type: "function",
+        function: {
+          name: "extract_university_info",
+          description: "Extract structured university information from the image",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              shortName: { type: "string" },
+              location: { type: "string" },
+              description: { type: "string" },
+              faculties: { type: "array", items: { type: "string" } },
+              programs: { type: "array", items: { type: "object", properties: { name: { type: "string" }, faculty: { type: "string" }, degreeType: { type: "string" }, duration: { type: "string" } } } },
+              admissionRequirements: { type: "object", properties: { general: { type: "string" }, minimumPoints: { type: "string" }, requiredSubjects: { type: "array", items: { type: "string" } } } },
+              contactInfo: { type: "object", properties: { phone: { type: "string" }, email: { type: "string" }, address: { type: "string" }, website: { type: "string" } } },
+              accreditation: { type: "string" },
+              establishedYear: { type: "integer" },
+              otherInfo: { type: "string" }
+            }
+          }
+        }
+      };
+    }
+
+    const toolName = toolDef.function.name;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -34,119 +181,17 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          {
-            role: "system",
-            content: `You are an expert at extracting structured information from university-related images. 
-Analyze the image and extract relevant information about the university such as:
-- University name and short name
-- Location/address
-- Contact information (phone, email, website)
-- Faculties and departments
-- Programs offered
-- Admission requirements
-- Fees and tuition
-- Accreditation status
-- Important dates
-- Any other relevant educational information
-
-Return the extracted information in a structured JSON format.`
-          },
+          { role: "system", content: systemPrompt },
           {
             role: "user",
             content: [
-              {
-                type: "text",
-                text: "Please analyze this university image and extract all relevant information. Return a JSON object with the following structure: { name, shortName, location, description, faculties (array), programs (array), admissionRequirements (object), contactInfo (object with phone, email, address), fees (object), accreditation, establishedYear, importantDates (array), otherInfo (any additional relevant information) }. Only include fields where you can extract actual information from the image."
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl
-                }
-              }
+              { type: "text", text: userPrompt },
+              { type: "image_url", image_url: { url: imageUrl } }
             ]
           }
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_university_info",
-              description: "Extract structured university information from the image",
-              parameters: {
-                type: "object",
-                properties: {
-                  name: { type: "string", description: "Full university name" },
-                  shortName: { type: "string", description: "Abbreviated name (e.g., UZ, NUST)" },
-                  location: { type: "string", description: "City or region" },
-                  description: { type: "string", description: "Brief description of the university" },
-                  faculties: { 
-                    type: "array", 
-                    items: { type: "string" },
-                    description: "List of faculties or schools"
-                  },
-                  programs: { 
-                    type: "array", 
-                    items: { 
-                      type: "object",
-                      properties: {
-                        name: { type: "string" },
-                        faculty: { type: "string" },
-                        degreeType: { type: "string" },
-                        duration: { type: "string" }
-                      }
-                    },
-                    description: "List of programs offered"
-                  },
-                  admissionRequirements: {
-                    type: "object",
-                    properties: {
-                      general: { type: "string" },
-                      minimumPoints: { type: "string" },
-                      requiredSubjects: { type: "array", items: { type: "string" } }
-                    },
-                    description: "Admission requirements"
-                  },
-                  contactInfo: {
-                    type: "object",
-                    properties: {
-                      phone: { type: "string" },
-                      email: { type: "string" },
-                      address: { type: "string" },
-                      website: { type: "string" }
-                    },
-                    description: "Contact information"
-                  },
-                  fees: {
-                    type: "object",
-                    properties: {
-                      tuition: { type: "string" },
-                      registration: { type: "string" },
-                      other: { type: "string" }
-                    },
-                    description: "Fee information"
-                  },
-                  accreditation: { type: "string", description: "Accreditation status" },
-                  establishedYear: { type: "integer", description: "Year established" },
-                  importantDates: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        event: { type: "string" },
-                        date: { type: "string" }
-                      }
-                    },
-                    description: "Important dates"
-                  },
-                  otherInfo: { type: "string", description: "Any other relevant information" }
-                },
-                additionalProperties: false
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "extract_university_info" } }
+        tools: [toolDef],
+        tool_choice: { type: "function", function: { name: toolName } }
       }),
     });
 
@@ -169,8 +214,6 @@ Return the extracted information in a structured JSON format.`
     }
 
     const data = await response.json();
-    
-    // Extract the tool call result
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     let extractedInfo = {};
     

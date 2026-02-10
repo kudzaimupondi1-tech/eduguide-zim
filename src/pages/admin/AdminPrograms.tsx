@@ -30,7 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Loader2, BookOpen, Upload, Download, FileSpreadsheet } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, BookOpen, Upload, Download, FileSpreadsheet, ImagePlus, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useExcelImportExport, ExcelColumn } from "@/hooks/useExcelImportExport";
@@ -89,7 +89,10 @@ export default function AdminPrograms() {
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [programSubjects, setProgramSubjects] = useState<ProgramSubject[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { exportToExcel, importFromExcel, downloadTemplate, isImporting, isExporting } = useExcelImportExport();
 
@@ -107,10 +110,7 @@ export default function AdminPrograms() {
   const fetchData = async () => {
     try {
       const [programsRes, universitiesRes, subjectsRes] = await Promise.all([
-        supabase
-          .from("programs")
-          .select("*, universities(name)")
-          .order("name"),
+        supabase.from("programs").select("*, universities(name)").order("name"),
         supabase.from("universities").select("id, name").eq("is_active", true).order("name"),
         supabase.from("subjects").select("id, name, level").eq("is_active", true).order("name"),
       ]);
@@ -124,24 +124,17 @@ export default function AdminPrograms() {
       setSubjects(subjectsRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load data",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to load data", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     try {
       if (editingProgram) {
         const { error } = await supabase
@@ -157,7 +150,6 @@ export default function AdminPrograms() {
             is_active: formData.is_active,
           })
           .eq("id", editingProgram.id);
-
         if (error) throw error;
         toast({ title: "Success", description: "Program updated successfully" });
       } else {
@@ -171,21 +163,15 @@ export default function AdminPrograms() {
           duration_years: formData.duration_years,
           is_active: formData.is_active,
         });
-
         if (error) throw error;
         toast({ title: "Success", description: "Program added successfully" });
       }
-
       setIsDialogOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
       console.error("Error saving program:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save program",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to save program", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -193,22 +179,15 @@ export default function AdminPrograms() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this program?")) return;
-
     try {
-      // Delete program subjects first
       await supabase.from("program_subjects").delete().eq("program_id", id);
-      
       const { error } = await supabase.from("programs").delete().eq("id", id);
       if (error) throw error;
       toast({ title: "Success", description: "Program deleted successfully" });
       fetchData();
     } catch (error) {
       console.error("Error deleting program:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete program",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to delete program", variant: "destructive" });
     }
   };
 
@@ -234,7 +213,6 @@ export default function AdminPrograms() {
         .from("program_subjects")
         .select("subject_id, is_required, minimum_grade")
         .eq("program_id", program.id);
-
       if (error) throw error;
       setProgramSubjects(data || []);
     } catch (error) {
@@ -248,33 +226,21 @@ export default function AdminPrograms() {
     if (exists) {
       setProgramSubjects(programSubjects.filter((ps) => ps.subject_id !== subjectId));
     } else {
-      setProgramSubjects([
-        ...programSubjects,
-        { subject_id: subjectId, is_required: true, minimum_grade: "C" },
-      ]);
+      setProgramSubjects([...programSubjects, { subject_id: subjectId, is_required: true, minimum_grade: "C" }]);
     }
   };
 
   const updateSubjectRequirement = (subjectId: string, field: string, value: any) => {
     setProgramSubjects(
-      programSubjects.map((ps) =>
-        ps.subject_id === subjectId ? { ...ps, [field]: value } : ps
-      )
+      programSubjects.map((ps) => (ps.subject_id === subjectId ? { ...ps, [field]: value } : ps))
     );
   };
 
   const saveSubjects = async () => {
     if (!selectedProgram) return;
     setIsSubmitting(true);
-
     try {
-      // Delete existing
-      await supabase
-        .from("program_subjects")
-        .delete()
-        .eq("program_id", selectedProgram.id);
-
-      // Insert new
+      await supabase.from("program_subjects").delete().eq("program_id", selectedProgram.id);
       if (programSubjects.length > 0) {
         const { error } = await supabase.from("program_subjects").insert(
           programSubjects.map((ps) => ({
@@ -286,16 +252,11 @@ export default function AdminPrograms() {
         );
         if (error) throw error;
       }
-
       toast({ title: "Success", description: "Subject requirements updated" });
       setIsSubjectsDialogOpen(false);
     } catch (error) {
       console.error("Error saving subjects:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save subject requirements",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to save subject requirements", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -304,19 +265,106 @@ export default function AdminPrograms() {
   const resetForm = () => {
     setEditingProgram(null);
     setFormData({
-      name: "",
-      university_id: "",
-      faculty: "",
-      degree_type: "",
-      description: "",
-      entry_requirements: "",
-      duration_years: 4,
-      is_active: true,
+      name: "", university_id: "", faculty: "", degree_type: "", description: "",
+      entry_requirements: "", duration_years: 4, is_active: true,
     });
   };
 
+  // AI Image Extraction for Programs
+  const handleImageExtract = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsExtracting(true);
+    toast({ title: "Extracting...", description: "AI is analyzing the document image. This may take a moment." });
+
+    try {
+      // Convert image to base64
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke("extract-image-info", {
+        body: { imageUrl: base64, extractionType: "programs" },
+      });
+
+      if (error) throw error;
+
+      const extracted = data?.extractedInfo;
+      if (!extracted?.programs?.length) {
+        toast({ title: "No Programs Found", description: "Could not extract program data from this image.", variant: "destructive" });
+        return;
+      }
+
+      // Find or ask for university
+      let universityId = "";
+      if (extracted.university_name) {
+        const matchedUni = universities.find(
+          (u) => u.name.toLowerCase().includes(extracted.university_name.toLowerCase()) ||
+                 extracted.university_name.toLowerCase().includes(u.name.toLowerCase())
+        );
+        if (matchedUni) universityId = matchedUni.id;
+      }
+
+      if (!universityId && universities.length > 0) {
+        // Use first university as default - admin can change
+        toast({ title: "Note", description: "Please select the correct university for extracted programs." });
+      }
+
+      let addedCount = 0;
+      let updatedCount = 0;
+
+      for (const prog of extracted.programs) {
+        if (!prog.name) continue;
+
+        const targetUniId = universityId || universities[0]?.id;
+        if (!targetUniId) continue;
+
+        // Check for existing program
+        const existing = programs.find(
+          (p) => p.name.toLowerCase() === prog.name.toLowerCase() && p.university_id === targetUniId
+        );
+
+        if (existing) {
+          await supabase.from("programs").update({
+            faculty: prog.faculty || existing.faculty,
+            degree_type: prog.degree_type || existing.degree_type,
+            entry_requirements: prog.entry_requirements || existing.entry_requirements,
+            duration_years: prog.duration_years || existing.duration_years,
+          }).eq("id", existing.id);
+          updatedCount++;
+        } else {
+          await supabase.from("programs").insert({
+            name: prog.name,
+            university_id: targetUniId,
+            faculty: prog.faculty || null,
+            degree_type: prog.degree_type || null,
+            entry_requirements: prog.entry_requirements || null,
+            duration_years: prog.duration_years || 4,
+            is_active: true,
+          });
+          addedCount++;
+        }
+      }
+
+      toast({
+        title: "Extraction Complete",
+        description: `Added ${addedCount} new programs, updated ${updatedCount} existing programs from image.`,
+      });
+      fetchData();
+    } catch (error) {
+      console.error("Error extracting from image:", error);
+      toast({ title: "Error", description: "Failed to extract program data from image", variant: "destructive" });
+    } finally {
+      setIsExtracting(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  };
+
   const handleExport = async () => {
-    // Fetch program subjects for export
     const { data: programSubjectsData } = await supabase
       .from("program_subjects")
       .select("program_id, minimum_grade, subjects(name)");
@@ -326,7 +374,6 @@ export default function AdminPrograms() {
         ?.filter((ps) => ps.program_id === p.id)
         .map((ps) => `${ps.subjects?.name}:${ps.minimum_grade || 'C'}`)
         .join(", ") || "";
-
       return {
         name: p.name,
         university_name: p.universities?.name || "",
@@ -338,7 +385,6 @@ export default function AdminPrograms() {
         subject_requirements: subjectReqs,
       };
     });
-
     exportToExcel(exportData, programColumns, "programs");
   };
 
@@ -351,113 +397,73 @@ export default function AdminPrograms() {
       let updatedCount = 0;
 
       for (const row of data) {
-        // Find university by name
         const university = universities.find(
           (u) => u.name.toLowerCase() === (row.university_name as string)?.toLowerCase()
         );
-        
-        if (!university) {
-          console.warn(`University not found: ${row.university_name}`);
-          continue;
-        }
+        if (!university) { console.warn(`University not found: ${row.university_name}`); continue; }
 
-        // Check if program already exists (same name + same university)
         const existingProgram = programs.find(
-          (p) => 
-            p.name.toLowerCase() === (row.name as string)?.toLowerCase() &&
-            p.university_id === university.id
+          (p) => p.name.toLowerCase() === (row.name as string)?.toLowerCase() && p.university_id === university.id
         );
 
         let programId: string;
-
         if (existingProgram) {
-          // Update existing program
-          const { error: updateError } = await supabase
-            .from("programs")
-            .update({
-              faculty: (row.faculty as string) || null,
-              degree_type: (row.degree_type as string) || null,
-              description: (row.description as string) || null,
-              entry_requirements: (row.entry_requirements as string) || null,
-              duration_years: Number(row.duration_years) || 4,
-              is_active: true,
-            })
-            .eq("id", existingProgram.id);
-
-          if (updateError) {
-            console.error("Error updating program:", updateError);
-            continue;
-          }
-          
+          const { error } = await supabase.from("programs").update({
+            faculty: (row.faculty as string) || null,
+            degree_type: (row.degree_type as string) || null,
+            description: (row.description as string) || null,
+            entry_requirements: (row.entry_requirements as string) || null,
+            duration_years: Number(row.duration_years) || 4,
+            is_active: true,
+          }).eq("id", existingProgram.id);
+          if (error) { console.error("Error updating:", error); continue; }
           programId = existingProgram.id;
           updatedCount++;
-
-          // Delete existing subject requirements for this program
-          await supabase
-            .from("program_subjects")
-            .delete()
-            .eq("program_id", programId);
+          await supabase.from("program_subjects").delete().eq("program_id", programId);
         } else {
-          // Insert new program
-          const { data: programData, error: programError } = await supabase
-            .from("programs")
-            .insert({
-              name: row.name as string,
-              university_id: university.id,
-              faculty: (row.faculty as string) || null,
-              degree_type: (row.degree_type as string) || null,
-              description: (row.description as string) || null,
-              entry_requirements: (row.entry_requirements as string) || null,
-              duration_years: Number(row.duration_years) || 4,
-              is_active: true,
-            })
-            .select()
-            .single();
-
-          if (programError) {
-            console.error("Error inserting program:", programError);
-            continue;
-          }
-          
+          const { data: programData, error } = await supabase.from("programs").insert({
+            name: row.name as string,
+            university_id: university.id,
+            faculty: (row.faculty as string) || null,
+            degree_type: (row.degree_type as string) || null,
+            description: (row.description as string) || null,
+            entry_requirements: (row.entry_requirements as string) || null,
+            duration_years: Number(row.duration_years) || 4,
+            is_active: true,
+          }).select().single();
+          if (error) { console.error("Error inserting:", error); continue; }
           programId = programData.id;
           addedCount++;
         }
 
-        // Parse and insert subject requirements
         const subjectReqsStr = row.subject_requirements as string;
         if (subjectReqsStr) {
           const subjectReqs = subjectReqsStr.split(",").map((s) => s.trim());
           for (const req of subjectReqs) {
             const [subjectName, grade] = req.split(":").map((s) => s.trim());
-            const subject = subjects.find(
-              (s) => s.name.toLowerCase() === subjectName?.toLowerCase()
-            );
+            const subject = subjects.find((s) => s.name.toLowerCase() === subjectName?.toLowerCase());
             if (subject) {
               await supabase.from("program_subjects").insert({
-                program_id: programId,
-                subject_id: subject.id,
-                is_required: true,
-                minimum_grade: grade || "C",
+                program_id: programId, subject_id: subject.id, is_required: true, minimum_grade: grade || "C",
               });
             }
           }
         }
       }
 
-      toast({
-        title: "Import Complete",
-        description: `Added ${addedCount} new programs, updated ${updatedCount} existing programs`,
-      });
-      
+      toast({ title: "Import Complete", description: `Added ${addedCount}, updated ${updatedCount} programs` });
       fetchData();
     });
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const aLevelSubjects = subjects.filter((s) => s.level === "A-Level");
+  const allSubjects = subjects;
+  const filteredPrograms = programs.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.universities?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.faculty?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <AdminLayout>
@@ -465,95 +471,63 @@ export default function AdminPrograms() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">Programs</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage university programs and their subject requirements
-            </p>
+            <p className="text-muted-foreground mt-1">Manage university programs and their subject requirements</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => downloadTemplate(programColumns, "programs")}>
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Template
+              <FileSpreadsheet className="w-4 h-4 mr-2" /> Template
             </Button>
             <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
-              <Download className="w-4 h-4 mr-2" />
-              Export
+              <Download className="w-4 h-4 mr-2" /> Export
             </Button>
             <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
-              <Upload className="w-4 h-4 mr-2" />
-              Import
+              <Upload className="w-4 h-4 mr-2" /> Import Excel
             </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImport}
-              className="hidden"
-            />
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) resetForm();
-            }}>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isExtracting}
+              className="border-primary/30 text-primary hover:bg-primary/10"
+            >
+              {isExtracting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ImagePlus className="w-4 h-4 mr-2" />}
+              Extract from Image
+            </Button>
+            <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageExtract} className="hidden" />
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Program
-                </Button>
+                <Button className="gap-2"><Plus className="w-4 h-4" /> Add Program</Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>
-                    {editingProgram ? "Edit Program" : "Add Program"}
-                  </DialogTitle>
+                  <DialogTitle>{editingProgram ? "Edit Program" : "Add Program"}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="name">Program Name *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                      />
+                      <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="university">University *</Label>
-                      <Select
-                        value={formData.university_id}
-                        onValueChange={(value) => setFormData({ ...formData, university_id: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select university" />
-                        </SelectTrigger>
+                      <Select value={formData.university_id} onValueChange={(value) => setFormData({ ...formData, university_id: value })}>
+                        <SelectTrigger><SelectValue placeholder="Select university" /></SelectTrigger>
                         <SelectContent>
-                          {universities.map((uni) => (
-                            <SelectItem key={uni.id} value={uni.id}>
-                              {uni.name}
-                            </SelectItem>
-                          ))}
+                          {universities.map((uni) => (<SelectItem key={uni.id} value={uni.id}>{uni.name}</SelectItem>))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="faculty">Faculty</Label>
-                      <Input
-                        id="faculty"
-                        value={formData.faculty}
-                        onChange={(e) => setFormData({ ...formData, faculty: e.target.value })}
-                      />
+                      <Input id="faculty" value={formData.faculty} onChange={(e) => setFormData({ ...formData, faculty: e.target.value })} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="degree_type">Degree Type</Label>
-                      <Select
-                        value={formData.degree_type}
-                        onValueChange={(value) => setFormData({ ...formData, degree_type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select degree type" />
-                        </SelectTrigger>
+                      <Select value={formData.degree_type} onValueChange={(value) => setFormData({ ...formData, degree_type: value })}>
+                        <SelectTrigger><SelectValue placeholder="Select degree type" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Bachelor">Bachelor</SelectItem>
                           <SelectItem value="Honours">Honours</SelectItem>
@@ -563,53 +537,26 @@ export default function AdminPrograms() {
                       </Select>
                     </div>
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={3}
-                    />
+                    <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="entry_requirements">Entry Requirements</Label>
-                    <Textarea
-                      id="entry_requirements"
-                      value={formData.entry_requirements}
-                      onChange={(e) => setFormData({ ...formData, entry_requirements: e.target.value })}
-                      rows={2}
-                    />
+                    <Textarea id="entry_requirements" value={formData.entry_requirements} onChange={(e) => setFormData({ ...formData, entry_requirements: e.target.value })} rows={3} />
                   </div>
-
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="duration_years">Duration (Years)</Label>
-                      <Input
-                        id="duration_years"
-                        type="number"
-                        min="1"
-                        max="8"
-                        value={formData.duration_years}
-                        onChange={(e) => setFormData({ ...formData, duration_years: parseInt(e.target.value) })}
-                      />
+                      <Input id="duration_years" type="number" min="1" max="8" value={formData.duration_years} onChange={(e) => setFormData({ ...formData, duration_years: parseInt(e.target.value) })} />
                     </div>
                     <div className="flex items-center gap-2 pt-6">
-                      <Switch
-                        id="is_active"
-                        checked={formData.is_active}
-                        onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                      />
+                      <Switch id="is_active" checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} />
                       <Label htmlFor="is_active">Active</Label>
                     </div>
                   </div>
-
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      Cancel
-                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                     <Button type="submit" disabled={isSubmitting || !formData.university_id}>
                       {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       {editingProgram ? "Update" : "Add"} Program
@@ -621,59 +568,49 @@ export default function AdminPrograms() {
           </div>
         </div>
 
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search programs, universities, faculties..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
         {/* Subjects Dialog */}
         <Dialog open={isSubjectsDialogOpen} onOpenChange={setIsSubjectsDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
-                Subject Requirements for {selectedProgram?.name}
-              </DialogTitle>
+              <DialogTitle>Subject Requirements for {selectedProgram?.name}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Select A-Level subjects required for this program and set minimum grades:
+                Select subjects required for this program and set minimum grades (A, B, C, D, E, O, F):
               </p>
               <div className="grid gap-2 max-h-[400px] overflow-y-auto">
-                {aLevelSubjects.map((subject) => {
+                {allSubjects.map((subject) => {
                   const ps = programSubjects.find((p) => p.subject_id === subject.id);
                   return (
-                    <div
-                      key={subject.id}
-                      className={`flex items-center gap-4 p-3 border rounded-lg transition-colors ${ps ? 'bg-primary/5 border-primary/30' : ''}`}
-                    >
-                      <Checkbox
-                        checked={!!ps}
-                        onCheckedChange={() => toggleSubject(subject.id)}
-                      />
-                      <span className="flex-1 font-medium">{subject.name}</span>
+                    <div key={subject.id} className={`flex items-center gap-4 p-3 border rounded-lg transition-colors ${ps ? 'bg-primary/5 border-primary/30' : ''}`}>
+                      <Checkbox checked={!!ps} onCheckedChange={() => toggleSubject(subject.id)} />
+                      <span className="flex-1 font-medium">
+                        {subject.name}
+                        <Badge variant="outline" className="ml-2 text-xs">{subject.level}</Badge>
+                      </span>
                       {ps && (
                         <>
                           <div className="flex items-center gap-2">
                             <Label className="text-sm whitespace-nowrap">Required:</Label>
-                            <Switch
-                              checked={ps.is_required}
-                              onCheckedChange={(checked) =>
-                                updateSubjectRequirement(subject.id, "is_required", checked)
-                              }
-                            />
+                            <Switch checked={ps.is_required} onCheckedChange={(checked) => updateSubjectRequirement(subject.id, "is_required", checked)} />
                           </div>
                           <div className="flex items-center gap-2">
                             <Label className="text-sm whitespace-nowrap">Min Grade:</Label>
-                            <Select
-                              value={ps.minimum_grade || "C"}
-                              onValueChange={(value) =>
-                                updateSubjectRequirement(subject.id, "minimum_grade", value)
-                              }
-                            >
-                              <SelectTrigger className="w-20">
-                                <SelectValue />
-                              </SelectTrigger>
+                            <Select value={ps.minimum_grade || "C"} onValueChange={(value) => updateSubjectRequirement(subject.id, "minimum_grade", value)}>
+                              <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                {GRADES.map((grade) => (
-                                  <SelectItem key={grade} value={grade}>
-                                    {grade}
-                                  </SelectItem>
-                                ))}
+                                {GRADES.map((grade) => (<SelectItem key={grade} value={grade}>{grade}</SelectItem>))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -684,9 +621,7 @@ export default function AdminPrograms() {
                 })}
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsSubjectsDialogOpen(false)}>
-                  Cancel
-                </Button>
+                <Button variant="outline" onClick={() => setIsSubjectsDialogOpen(false)}>Cancel</Button>
                 <Button onClick={saveSubjects} disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Save Requirements
@@ -699,12 +634,10 @@ export default function AdminPrograms() {
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : programs.length === 0 ? (
+              <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : filteredPrograms.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No programs found. Add one to get started.
+                {searchQuery ? "No programs match your search." : "No programs found. Add one to get started."}
               </div>
             ) : (
               <Table>
@@ -713,58 +646,36 @@ export default function AdminPrograms() {
                     <TableHead>Program</TableHead>
                     <TableHead>University</TableHead>
                     <TableHead>Faculty</TableHead>
+                    <TableHead>Entry Requirements</TableHead>
                     <TableHead>Degree</TableHead>
-                    <TableHead>Duration</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {programs.map((program) => (
+                  {filteredPrograms.map((program) => (
                     <TableRow key={program.id}>
-                      <TableCell className="font-medium">{program.name}</TableCell>
+                      <TableCell className="font-medium max-w-[200px]">{program.name}</TableCell>
                       <TableCell>{program.universities?.name || "-"}</TableCell>
                       <TableCell>{program.faculty || "-"}</TableCell>
-                      <TableCell>
-                        {program.degree_type && (
-                          <Badge variant="outline">{program.degree_type}</Badge>
-                        )}
+                      <TableCell className="max-w-[300px]">
+                        <p className="text-sm text-muted-foreground line-clamp-2">{program.entry_requirements || "-"}</p>
                       </TableCell>
-                      <TableCell>{program.duration_years ? `${program.duration_years} years` : "-"}</TableCell>
+                      <TableCell>{program.degree_type && <Badge variant="outline">{program.degree_type}</Badge>}</TableCell>
                       <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            program.is_active
-                              ? "bg-success/20 text-success"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
+                        <span className={`px-2 py-1 rounded-full text-xs ${program.is_active ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"}`}>
                           {program.is_active ? "Active" : "Inactive"}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openSubjectsDialog(program)}
-                            title="Manage subject requirements"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => openSubjectsDialog(program)} title="Manage subject requirements">
                             <BookOpen className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEditDialog(program)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(program)}>
                             <Pencil className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(program.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(program.id)} className="text-destructive hover:text-destructive">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
