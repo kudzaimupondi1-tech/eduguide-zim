@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.student-chatbot]
 verify_jwt = false
+
+[functions.cleanup-idle-accounts]
+verify_jwt = false

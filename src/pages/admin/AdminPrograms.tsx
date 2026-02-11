@@ -105,6 +105,14 @@ export default function AdminPrograms() {
     entry_requirements: "",
     duration_years: 4,
     is_active: true,
+    entry_type: "normal",
+    condition_logic: "AND",
+    structured_requirements: [] as Array<{
+      qualification_type: string;
+      min_passes: number;
+      required_subjects: string[];
+      min_grade: string;
+    }>,
   });
 
   const fetchData = async () => {
@@ -148,6 +156,9 @@ export default function AdminPrograms() {
             entry_requirements: formData.entry_requirements || null,
             duration_years: formData.duration_years,
             is_active: formData.is_active,
+            entry_type: formData.entry_type,
+            condition_logic: formData.condition_logic,
+            structured_requirements: formData.structured_requirements,
           })
           .eq("id", editingProgram.id);
         if (error) throw error;
@@ -162,6 +173,9 @@ export default function AdminPrograms() {
           entry_requirements: formData.entry_requirements || null,
           duration_years: formData.duration_years,
           is_active: formData.is_active,
+          entry_type: formData.entry_type,
+          condition_logic: formData.condition_logic,
+          structured_requirements: formData.structured_requirements,
         });
         if (error) throw error;
         toast({ title: "Success", description: "Program added successfully" });
@@ -202,6 +216,9 @@ export default function AdminPrograms() {
       entry_requirements: program.entry_requirements || "",
       duration_years: program.duration_years || 4,
       is_active: program.is_active ?? true,
+      entry_type: (program as any).entry_type || "normal",
+      condition_logic: (program as any).condition_logic || "AND",
+      structured_requirements: (program as any).structured_requirements || [],
     });
     setIsDialogOpen(true);
   };
@@ -267,7 +284,42 @@ export default function AdminPrograms() {
     setFormData({
       name: "", university_id: "", faculty: "", degree_type: "", description: "",
       entry_requirements: "", duration_years: 4, is_active: true,
+      entry_type: "normal", condition_logic: "AND", structured_requirements: [],
     });
+  };
+
+  const addRequirementCondition = () => {
+    setFormData({
+      ...formData,
+      structured_requirements: [
+        ...formData.structured_requirements,
+        { qualification_type: "O-Level", min_passes: 5, required_subjects: [], min_grade: "C" },
+      ],
+    });
+  };
+
+  const removeRequirementCondition = (index: number) => {
+    setFormData({
+      ...formData,
+      structured_requirements: formData.structured_requirements.filter((_, i) => i !== index),
+    });
+  };
+
+  const updateRequirementCondition = (index: number, field: string, value: any) => {
+    const updated = [...formData.structured_requirements];
+    (updated[index] as any)[field] = value;
+    setFormData({ ...formData, structured_requirements: updated });
+  };
+
+  const getRequirementSummary = (): string => {
+    if (formData.structured_requirements.length === 0) return formData.entry_requirements || "No requirements set";
+    const joiner = formData.condition_logic === "AND" ? " AND " : " OR ";
+    return formData.structured_requirements.map((r) => {
+      let text = `${r.min_passes} ${r.qualification_type} passes`;
+      if (r.min_grade) text += ` (min grade: ${r.min_grade})`;
+      if (r.required_subjects.length > 0) text += ` including ${r.required_subjects.join(", ")}`;
+      return text;
+    }).join(joiner);
   };
 
   // AI Image Extraction for Programs
@@ -542,9 +594,98 @@ export default function AdminPrograms() {
                     <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="entry_requirements">Entry Requirements</Label>
-                    <Textarea id="entry_requirements" value={formData.entry_requirements} onChange={(e) => setFormData({ ...formData, entry_requirements: e.target.value })} rows={3} />
+                    <Label htmlFor="entry_requirements">Entry Requirements (Text Description)</Label>
+                    <Textarea id="entry_requirements" value={formData.entry_requirements} onChange={(e) => setFormData({ ...formData, entry_requirements: e.target.value })} rows={2} />
                   </div>
+
+                  {/* Entry Type */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Entry Type</Label>
+                      <Select value={formData.entry_type} onValueChange={(value) => setFormData({ ...formData, entry_type: value })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="normal">Normal Entry</SelectItem>
+                          <SelectItem value="special">Special Entry</SelectItem>
+                          <SelectItem value="diploma">Diploma / Mature / Other Entry</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>How conditions are combined</Label>
+                      <Select value={formData.condition_logic} onValueChange={(value) => setFormData({ ...formData, condition_logic: value })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AND">ALL conditions must be met (AND)</SelectItem>
+                          <SelectItem value="OR">ANY condition may be met (OR)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Structured Requirement Conditions */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold">Requirement Conditions</Label>
+                      <Button type="button" variant="outline" size="sm" onClick={addRequirementCondition}>
+                        <Plus className="w-3 h-3 mr-1" /> Add Condition
+                      </Button>
+                    </div>
+                    {formData.structured_requirements.map((req, idx) => (
+                      <div key={idx} className="p-3 border rounded-lg bg-muted/30 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Condition {idx + 1}</span>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => removeRequirementCondition(idx)} className="text-destructive h-7">
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Qualification Type</Label>
+                            <Select value={req.qualification_type} onValueChange={(v) => updateRequirementCondition(idx, "qualification_type", v)}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="O-Level">O-Level</SelectItem>
+                                <SelectItem value="A-Level">A-Level</SelectItem>
+                                <SelectItem value="Diploma">Diploma</SelectItem>
+                                <SelectItem value="Certificate">Certificate</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Min Passes Required</Label>
+                            <Input type="number" min={1} max={15} value={req.min_passes}
+                              onChange={(e) => updateRequirementCondition(idx, "min_passes", parseInt(e.target.value) || 1)}
+                              className="h-8 text-xs" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Minimum Grade</Label>
+                            <Select value={req.min_grade} onValueChange={(v) => updateRequirementCondition(idx, "min_grade", v)}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {GRADES.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Required Subjects (comma-separated, e.g. Mathematics, English)</Label>
+                          <Input value={req.required_subjects.join(", ")}
+                            onChange={(e) => updateRequirementCondition(idx, "required_subjects", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))}
+                            className="h-8 text-xs" placeholder="Mathematics, English" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Preview Summary */}
+                  {formData.structured_requirements.length > 0 && (
+                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                      <Label className="text-xs font-semibold text-primary">Preview:</Label>
+                      <p className="text-sm text-foreground mt-1">{getRequirementSummary()}</p>
+                    </div>
+                  )}
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="duration_years">Duration (Years)</Label>
@@ -646,6 +787,7 @@ export default function AdminPrograms() {
                     <TableHead>Program</TableHead>
                     <TableHead>University</TableHead>
                     <TableHead>Faculty</TableHead>
+                    <TableHead>Entry Type</TableHead>
                     <TableHead>Entry Requirements</TableHead>
                     <TableHead>Degree</TableHead>
                     <TableHead>Status</TableHead>
@@ -658,6 +800,11 @@ export default function AdminPrograms() {
                       <TableCell className="font-medium max-w-[200px]">{program.name}</TableCell>
                       <TableCell>{program.universities?.name || "-"}</TableCell>
                       <TableCell>{program.faculty || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize text-xs">
+                          {(program as any).entry_type || "normal"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="max-w-[300px]">
                         <p className="text-sm text-muted-foreground line-clamp-2">{program.entry_requirements || "-"}</p>
                       </TableCell>

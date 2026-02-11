@@ -16,6 +16,7 @@ import {
   Megaphone,
   X
 } from "lucide-react";
+import { StudentRating } from "@/components/StudentRating";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -84,6 +85,9 @@ const Dashboard = () => {
 
   const fetchUserData = async (userId: string) => {
     try {
+      // Update last_active_at for idle tracking
+      supabase.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("user_id", userId).then();
+
       // Fetch all data in parallel
       const [profileRes, subjectCountRes, deadlinesRes, announcementsRes, notificationsRes] = await Promise.all([
         supabase.from("profiles").select("full_name").eq("user_id", userId).single(),
@@ -472,6 +476,17 @@ const Dashboard = () => {
             </Card>
           </div>
         </div>
+
+        {/* Rating Section */}
+        <Card className="mt-6">
+          <CardContent className="pt-6 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-foreground mb-1">How do you find EduGuide?</h3>
+              <p className="text-sm text-muted-foreground">Your feedback helps us improve</p>
+            </div>
+            <StudentRating />
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

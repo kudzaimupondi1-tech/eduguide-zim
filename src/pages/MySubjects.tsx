@@ -214,6 +214,18 @@ const MySubjects = () => {
           </CardContent>
         </Card>
 
+        {/* Student Instructions */}
+        <Card className="mb-6 bg-primary/5 border-primary/20">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-sm text-foreground font-medium mb-1">📋 Instructions</p>
+            <p className="text-xs text-muted-foreground">
+              Please enter your academic results accurately. The system will use this information to recommend programmes that best match your qualifications.
+              You must enter O-Level subjects and grades{studentLevel === "A-Level" ? ", A-Level subjects and grades" : ""}, and any diplomas or other qualifications if applicable.
+              Once submitted, the system will evaluate your results against all active programme requirements.
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Add Subject Section */}
         <Card className="mb-8">
           <CardHeader>

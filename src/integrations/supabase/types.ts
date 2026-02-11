@@ -233,6 +233,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          last_active_at: string | null
           phone: string | null
           updated_at: string
           user_id: string
@@ -243,6 +244,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          last_active_at?: string | null
           phone?: string | null
           updated_at?: string
           user_id: string
@@ -253,6 +255,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          last_active_at?: string | null
           phone?: string | null
           updated_at?: string
           user_id?: string
@@ -333,41 +336,50 @@ export type Database = {
       }
       programs: {
         Row: {
+          condition_logic: string | null
           created_at: string
           degree_type: string | null
           description: string | null
           duration_years: number | null
           entry_requirements: string | null
+          entry_type: string | null
           faculty: string | null
           id: string
           is_active: boolean | null
           name: string
+          structured_requirements: Json | null
           university_id: string
           updated_at: string
         }
         Insert: {
+          condition_logic?: string | null
           created_at?: string
           degree_type?: string | null
           description?: string | null
           duration_years?: number | null
           entry_requirements?: string | null
+          entry_type?: string | null
           faculty?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          structured_requirements?: Json | null
           university_id: string
           updated_at?: string
         }
         Update: {
+          condition_logic?: string | null
           created_at?: string
           degree_type?: string | null
           description?: string | null
           duration_years?: number | null
           entry_requirements?: string | null
+          entry_type?: string | null
           faculty?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          structured_requirements?: Json | null
           university_id?: string
           updated_at?: string
         }
@@ -515,6 +527,30 @@ export type Database = {
           is_active?: boolean | null
           level?: string
           name?: string
+        }
+        Relationships: []
+      }
+      system_ratings: {
+        Row: {
+          created_at: string
+          feedback: string | null
+          id: string
+          rating_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          rating_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          rating_type?: string
+          user_id?: string
         }
         Relationships: []
       }

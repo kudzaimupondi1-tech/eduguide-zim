@@ -74,7 +74,7 @@ const Recommendations = () => {
   const [studentSubjects, setStudentSubjects] = useState<StudentSubject[]>([]);
   const [combinations, setCombinations] = useState<SubjectCombination[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [universityFilter, setUniversityFilter] = useState<string>("all");
+  const [selectedUniversityIds, setSelectedUniversityIds] = useState<string[]>([]);
   const [universities, setUniversities] = useState<Tables<"universities">[]>([]);
   const [activeTab, setActiveTab] = useState<string>("recommendations");
 
@@ -166,64 +166,100 @@ const Recommendations = () => {
     return meetsGradeRequirement(studentSubject.grade, minGrade);
   };
 
-  // Calculate match score for A-Level students (grade-based matching)
-  // NEW LOGIC: Only show programs where the student has ALL required subjects and meets grade requirements
+  // Calculate match score for A-Level students
+  // Enhanced logic: 100% if all met, partial if some met, 0% if mandatory missing
   const calculateMatchScore = (program: Program): { 
     score: number; 
     matched: number; 
     total: number; 
     details: string[];
     qualifies: boolean;
-    matchedCount: number; // Number of subjects the student has that match program requirements
+    matchedCount: number;
+    needsManualReview: boolean;
   } => {
     if (!program.program_subjects?.length || studentSubjects.length === 0) {
-      return { score: 0, matched: 0, total: 0, details: [], qualifies: false, matchedCount: 0 };
-    }
-    
-    const requiredSubjects = program.program_subjects.filter(ps => ps.is_required);
-    if (requiredSubjects.length === 0) {
-      return { score: 100, matched: 0, total: 0, details: ["No specific requirements"], qualifies: true, matchedCount: 0 };
+      return { score: 0, matched: 0, total: 0, details: [], qualifies: false, matchedCount: 0, needsManualReview: false };
     }
 
-    let matched = 0;
-    let hasSubjectButFailsGrade = 0;
+    // Check if program has special/manual review entry type
+    const entryType = (program as any).entry_type;
+    const needsManualReview = entryType === "special" || entryType === "diploma";
+    
+    const requiredSubjects = program.program_subjects.filter(ps => ps.is_required);
+    const optionalSubjects = program.program_subjects.filter(ps => !ps.is_required);
+    
+    if (requiredSubjects.length === 0 && optionalSubjects.length === 0) {
+      return { score: 100, matched: 0, total: 0, details: ["No specific requirements"], qualifies: true, matchedCount: 0, needsManualReview };
+    }
+
+    let requiredMatched = 0;
+    let requiredFailed = 0;
+    let optionalMatched = 0;
     let studentHasSubjectCount = 0;
     const details: string[] = [];
 
+    // Check required subjects
     for (const req of requiredSubjects) {
       const subjectName = req.subjects?.name || "Unknown";
       const minGrade = req.minimum_grade;
       const studentSubject = studentSubjects.find((ss) => ss.subject_id === req.subjects?.id);
       
       if (!studentSubject) {
-        // Student doesn't have this subject - skip (don't disqualify)
-        details.push(`— ${subjectName}: Not studied`);
+        details.push(`✗ ${subjectName}: Not studied (required)`);
+        requiredFailed++;
       } else {
         studentHasSubjectCount++;
         if (meetsGradeRequirement(studentSubject.grade, minGrade)) {
-          matched++;
+          requiredMatched++;
           details.push(`✓ ${subjectName}: ${studentSubject.grade || "N/A"} (need ${minGrade || "any"})`);
         } else {
-          hasSubjectButFailsGrade++;
+          requiredFailed++;
           details.push(`✗ ${subjectName}: ${studentSubject.grade || "N/A"} < ${minGrade} required`);
         }
       }
     }
 
-    // QUALIFICATION RULE:
-    // Student qualifies if:
-    // 1. They have at least 1 subject that matches the program's requirements
-    // 2. For ALL subjects the student has entered that are also in the program requirements,
-    //    the student's grade meets or exceeds the minimum
-    // 3. No grade failures on any matching subjects
-    const qualifies = studentHasSubjectCount >= 1 && hasSubjectButFailsGrade === 0;
+    // Check optional subjects
+    for (const opt of optionalSubjects) {
+      const subjectName = opt.subjects?.name || "Unknown";
+      const minGrade = opt.minimum_grade;
+      const studentSubject = studentSubjects.find((ss) => ss.subject_id === opt.subjects?.id);
+      
+      if (studentSubject) {
+        studentHasSubjectCount++;
+        if (meetsGradeRequirement(studentSubject.grade, minGrade)) {
+          optionalMatched++;
+          details.push(`✓ ${subjectName}: ${studentSubject.grade || "N/A"} (optional, need ${minGrade || "any"})`);
+        } else {
+          details.push(`— ${subjectName}: ${studentSubject.grade || "N/A"} (optional, below ${minGrade})`);
+        }
+      }
+    }
+
+    const totalRequired = requiredSubjects.length;
+    const totalOptional = optionalSubjects.length;
     
-    // Score: percentage of required subjects the student has and meets
-    const score = requiredSubjects.length > 0 
-      ? Math.round((matched / requiredSubjects.length) * 100) 
-      : 0;
+    // Exact match (100%): ALL required met
+    // Partial: some required met
+    // No match: mandatory failed -> hide
+    const qualifies = requiredFailed === 0 && studentHasSubjectCount >= 1;
     
-    return { score, matched, total: requiredSubjects.length, details, qualifies, matchedCount: studentHasSubjectCount };
+    // Score calculation: required subjects weighted higher
+    let score = 0;
+    if (totalRequired > 0) {
+      const requiredWeight = 0.8;
+      const optionalWeight = 0.2;
+      const requiredScore = totalRequired > 0 ? (requiredMatched / totalRequired) : 1;
+      const optionalScore = totalOptional > 0 ? (optionalMatched / totalOptional) : 0;
+      score = Math.round((requiredScore * requiredWeight + optionalScore * optionalWeight) * 100);
+    } else {
+      score = totalOptional > 0 ? Math.round((optionalMatched / totalOptional) * 100) : 0;
+    }
+    
+    // Cap at 100%
+    score = Math.min(100, score);
+    
+    return { score, matched: requiredMatched + optionalMatched, total: totalRequired + totalOptional, details, qualifies, matchedCount: studentHasSubjectCount, needsManualReview };
   };
 
   // Get O-Level subjects sorted by grade (best first)
@@ -331,12 +367,12 @@ const Recommendations = () => {
       matchData: calculateMatchScore(program)
     }))
     .filter(program => {
-      // CRITICAL: Only show programs where student qualifies (has all subjects + meets all grade requirements)
+      // CRITICAL: Only show programs where student qualifies
       if (!program.matchData.qualifies) return false;
       
       const matchesSearch = program.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         program.universities?.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesUniversity = universityFilter === "all" || program.university_id === universityFilter;
+      const matchesUniversity = selectedUniversityIds.length === 0 || selectedUniversityIds.includes(program.university_id);
       return matchesSearch && matchesUniversity;
     })
     .sort((a, b) => b.matchData.score - a.matchData.score);
@@ -583,20 +619,34 @@ const Recommendations = () => {
                   className="pl-10"
                 />
               </div>
-              <Select value={universityFilter} onValueChange={setUniversityFilter}>
-                <SelectTrigger className="w-full md:w-64">
-                  <Filter className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Filter by University" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Universities</SelectItem>
+              <div className="w-full md:w-80">
+                <p className="text-xs text-muted-foreground mb-1">Select universities (click to toggle):</p>
+                <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-muted/30 max-h-32 overflow-y-auto">
+                  <Badge
+                    variant={selectedUniversityIds.length === 0 ? "default" : "outline"}
+                    className="cursor-pointer text-xs"
+                    onClick={() => setSelectedUniversityIds([])}
+                  >
+                    All
+                  </Badge>
                   {universities.map((uni) => (
-                    <SelectItem key={uni.id} value={uni.id}>
-                      {uni.name}
-                    </SelectItem>
+                    <Badge
+                      key={uni.id}
+                      variant={selectedUniversityIds.includes(uni.id) ? "default" : "outline"}
+                      className="cursor-pointer text-xs"
+                      onClick={() => {
+                        setSelectedUniversityIds((prev) =>
+                          prev.includes(uni.id)
+                            ? prev.filter((id) => id !== uni.id)
+                            : [...prev, uni.id]
+                        );
+                      }}
+                    >
+                      {uni.short_name || uni.name}
+                    </Badge>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
             </div>
 
             {/* Results */}
@@ -624,7 +674,12 @@ const Recommendations = () => {
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {program.matchData.needsManualReview && (
+                            <Badge variant="outline" className="border-secondary text-secondary">
+                              Manual Review Required
+                            </Badge>
+                          )}
                           {program.matchData.score === 100 && (
                             <Badge className="bg-accent text-accent-foreground">
                               <Star className="w-3 h-3 mr-1" />
@@ -639,6 +694,11 @@ const Recommendations = () => {
                           )}
                           {program.degree_type && (
                             <Badge variant="outline">{program.degree_type}</Badge>
+                          )}
+                          {(program as any).entry_type && (program as any).entry_type !== "normal" && (
+                            <Badge variant="secondary" className="text-xs capitalize">
+                              {(program as any).entry_type} entry
+                            </Badge>
                           )}
                         </div>
                         <CardTitle className="text-lg">{program.name}</CardTitle>
@@ -748,7 +808,7 @@ const Recommendations = () => {
                         View All Programs
                       </Button>
                     )}
-                    <Button variant="outline" onClick={() => { setSearchQuery(""); setUniversityFilter("all"); }}>
+                    <Button variant="outline" onClick={() => { setSearchQuery(""); setSelectedUniversityIds([]); }}>
                       Clear Filters
                     </Button>
                   </div>
