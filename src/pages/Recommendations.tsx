@@ -177,17 +177,119 @@ const Recommendations = () => {
     matchedCount: number;
     needsManualReview: boolean;
   } => {
-    if (!program.program_subjects?.length || studentSubjects.length === 0) {
+    // If student has no subjects, can't match
+    if (studentSubjects.length === 0) {
       return { score: 0, matched: 0, total: 0, details: [], qualifies: false, matchedCount: 0, needsManualReview: false };
     }
 
-    // Check if program has special/manual review entry type
     const entryType = (program as any).entry_type;
     const needsManualReview = entryType === "special" || entryType === "diploma";
-    
-    const requiredSubjects = program.program_subjects.filter(ps => ps.is_required);
-    const optionalSubjects = program.program_subjects.filter(ps => !ps.is_required);
-    
+
+    const structured: any[] = (program as any).structured_requirements || [];
+    const conditionLogic: string = (program as any).condition_logic || "AND";
+
+    const details: string[] = [];
+
+    // Helper: count valid passes for a qualification level using minGrade
+    const countValidPasses = (level: string, minGrade: string | null) => {
+      return studentSubjects.filter((ss) => ss.level === level && meetsGradeRequirement(ss.grade, minGrade)).length;
+    };
+
+    // If structured requirements are provided, evaluate them precisely
+    if (structured.length > 0) {
+      let blocksPassed = 0;
+      let totalBlocks = structured.length;
+      let totalMatched = 0;
+      let totalNeeded = 0;
+
+      for (const block of structured) {
+        const qLevel = block.qualification_type || "A-Level";
+        const minPasses = block.min_passes || 0;
+        const minGrade = block.min_grade || null;
+        const compulsorySubjects: string[] = block.compulsory_subjects || [];
+        const subjectGroups: any[] = block.subject_groups || [];
+
+        // Count general valid passes at this level
+        const validPasses = countValidPasses(qLevel, minGrade);
+        const blockDetails: string[] = [];
+
+        // Check min passes
+        if (minPasses > 0) {
+          blockDetails.push(`${validPasses}/${minPasses} valid ${qLevel} passes (min ${minPasses})`);
+        }
+
+        // Check compulsory subjects (ALL must be present)
+        let compulsorySatisfied = true;
+        if (compulsorySubjects.length > 0) {
+          for (const subjName of compulsorySubjects) {
+            const studentMatch = studentSubjects.find((ss) => (ss.subjects?.name || "").toLowerCase() === subjName.toLowerCase());
+            if (studentMatch && meetsGradeRequirement(studentMatch.grade, minGrade)) {
+              blockDetails.push(`✓ Compulsory ${subjName}: ${studentMatch.grade || "N/A"}`);
+            } else {
+              blockDetails.push(`✗ Compulsory ${subjName}: not met or below ${minGrade || "any"}`);
+              compulsorySatisfied = false;
+            }
+          }
+        }
+
+        // Check subject groups with OR logic
+        let allGroupsSatisfied = true;
+        if (subjectGroups.length > 0) {
+          for (let gIdx = 0; gIdx < subjectGroups.length; gIdx++) {
+            const group = subjectGroups[gIdx];
+            const groupSubjects: string[] = group.subjects || [];
+            const minRequiredFromGroup = group.min_required || 1;
+
+            let groupMatched = 0;
+            const groupDetails: string[] = [];
+
+            for (const subjName of groupSubjects) {
+              const studentMatch = studentSubjects.find((ss) => (ss.subjects?.name || "").toLowerCase() === subjName.toLowerCase());
+              if (studentMatch && meetsGradeRequirement(studentMatch.grade, minGrade)) {
+                groupMatched++;
+                groupDetails.push(`✓ ${subjName}: ${studentMatch.grade || "N/A"}`);
+              } else {
+                groupDetails.push(`✗ ${subjName}: not met or below ${minGrade || "any"}`);
+              }
+            }
+
+            // Check if group satisfied (needs at least minRequiredFromGroup)
+            const groupSatisfied = groupMatched >= minRequiredFromGroup;
+            blockDetails.push(`Group ${gIdx + 1}: ${groupMatched}/${minRequiredFromGroup} required (${groupDetails.join(", ")})`);
+
+            if (!groupSatisfied) {
+              allGroupsSatisfied = false;
+            }
+          }
+        }
+
+        // Determine if block satisfied
+        const passesMinPasses = minPasses > 0 ? validPasses >= minPasses : true;
+        const blockSatisfied = passesMinPasses && compulsorySatisfied && allGroupsSatisfied;
+
+        if (blockSatisfied) blocksPassed++;
+
+        totalMatched += Math.min(validPasses, minPasses || validPasses);
+        totalNeeded += minPasses || 0;
+
+        details.push(`Block: ${qLevel} — ${blockDetails.join("; ")} — ${blockSatisfied ? "PASSED" : "FAILED"}`);
+      }
+
+      // Apply condition logic across blocks
+      const qualifies = conditionLogic === "AND" ? blocksPassed === totalBlocks : blocksPassed > 0;
+
+      // Score: proportion of blocks passed and passes met
+      const blockScore = totalBlocks > 0 ? Math.round((blocksPassed / totalBlocks) * 100) : 0;
+      const passScore = totalNeeded > 0 ? Math.round((totalMatched / totalNeeded) * 100) : blockScore;
+      const score = Math.min(100, Math.round((blockScore * 0.7) + (passScore * 0.3)));
+
+      return { score, matched: totalMatched, total: totalNeeded, details, qualifies, matchedCount: totalMatched, needsManualReview };
+    }
+
+    // Fallback: legacy per-subject program_subjects logic
+    const requiredSubjects = program.program_subjects?.filter(ps => ps.is_required) || [];
+    const optionalSubjects = program.program_subjects?.filter(ps => !ps.is_required) || [];
+
     if (requiredSubjects.length === 0 && optionalSubjects.length === 0) {
       return { score: 100, matched: 0, total: 0, details: ["No specific requirements"], qualifies: true, matchedCount: 0, needsManualReview };
     }
@@ -196,7 +298,6 @@ const Recommendations = () => {
     let requiredFailed = 0;
     let optionalMatched = 0;
     let studentHasSubjectCount = 0;
-    const details: string[] = [];
 
     // Check required subjects
     for (const req of requiredSubjects) {
@@ -238,13 +339,8 @@ const Recommendations = () => {
 
     const totalRequired = requiredSubjects.length;
     const totalOptional = optionalSubjects.length;
-    
-    // Exact match (100%): ALL required met
-    // Partial: some required met
-    // No match: mandatory failed -> hide
     const qualifies = requiredFailed === 0 && studentHasSubjectCount >= 1;
-    
-    // Score calculation: required subjects weighted higher
+
     let score = 0;
     if (totalRequired > 0) {
       const requiredWeight = 0.8;
@@ -255,10 +351,8 @@ const Recommendations = () => {
     } else {
       score = totalOptional > 0 ? Math.round((optionalMatched / totalOptional) * 100) : 0;
     }
-    
-    // Cap at 100%
+
     score = Math.min(100, score);
-    
     return { score, matched: requiredMatched + optionalMatched, total: totalRequired + totalOptional, details, qualifies, matchedCount: studentHasSubjectCount, needsManualReview };
   };
 

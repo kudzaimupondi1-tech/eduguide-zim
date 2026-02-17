@@ -11,11 +11,14 @@ serve(async (req) => {
   }
 
   try {
-    const { imageUrl, extractionType } = await req.json();
-    
-    if (!imageUrl) {
+    const body = await req.json();
+    const imageUrl = body.imageUrl;
+    const inputText = body.text;
+    const extractionType = body.extractionType;
+
+    if (!imageUrl && !inputText) {
       return new Response(
-        JSON.stringify({ error: "Image URL is required" }),
+        JSON.stringify({ error: "imageUrl or text is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -140,6 +143,36 @@ Extract all subject combinations visible in the image.`;
           }
         }
       };
+    } else if (extractionType === "requirements") {
+      systemPrompt = `You are an expert at parsing university programme entry requirements text and converting them into structured admission conditions.
+Given a free-text entry requirements paragraph, identify qualification levels (O-Level, A-Level, Diploma), minimum passes, minimum grade thresholds, any compulsory subjects, and alternative subject groups with minimum counts.`;
+      userPrompt = `Parse the following entry requirements text and return a JSON array named structured_requirements. Each element should be an object with: qualification_type (string), min_passes (integer), min_grade (string or null), compulsory_subjects (array of strings), subject_groups (array of { subjects: string[], min_required: number }). Only include fields you can extract. Example: [{ qualification_type: "O-Level", min_passes: 5, min_grade: "C", compulsory_subjects: ["Mathematics"], subject_groups: [{ subjects: ["Physics","Chemistry"], min_required: 1 }] }]`;
+      toolDef = {
+        type: "function",
+        function: {
+          name: "extract_requirements",
+          description: "Extract structured admission requirement conditions from free text",
+          parameters: {
+            type: "object",
+            properties: {
+              structured_requirements: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    qualification_type: { type: "string" },
+                    min_passes: { type: "integer" },
+                    min_grade: { type: "string" },
+                    compulsory_subjects: { type: "array", items: { type: "string" } },
+                    subject_groups: { type: "array", items: { type: "object", properties: { subjects: { type: "array", items: { type: "string" } }, min_required: { type: "integer" } } } }
+                  }
+                }
+              }
+            },
+            required: ["structured_requirements"]
+          }
+        }
+      };
     } else {
       // Default: university info extraction (original behavior)
       systemPrompt = `You are an expert at extracting structured information from university-related images. 
@@ -180,16 +213,24 @@ Analyze the image and extract relevant information about the university.`;
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userPrompt },
-              { type: "image_url", image_url: { url: imageUrl } }
-            ]
+        messages: (() => {
+          if (inputText) {
+            return [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: `${userPrompt}\n\nSOURCE_TEXT:\n${inputText}` }
+            ];
           }
-        ],
+          return [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userPrompt },
+                { type: "image_url", image_url: { url: imageUrl } }
+              ]
+            }
+          ];
+        })(),
         tools: [toolDef],
         tool_choice: { type: "function", function: { name: toolName } }
       }),
