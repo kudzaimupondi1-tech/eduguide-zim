@@ -25,6 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, UserCircle, Shield, Pencil, Trash2, Search, Plus } from "lucide-react";
@@ -289,97 +290,147 @@ export default function AdminUsers() {
                 {searchQuery ? "No users match your search." : "No users found."}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Roles</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Desktop / Tablet: table view */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Roles</TableHead>
+                        <TableHead>Joined</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProfiles.map((profile) => {
+                        const roles = getUserRoles(profile.user_id);
+                        return (
+                          <TableRow key={profile.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar>
+                                  <AvatarFallback>
+                                    <UserCircle className="w-5 h-5 text-primary" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{profile.full_name || "No name"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>{profile.email || "-"}</TableCell>
+                            <TableCell>{profile.phone || "-"}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1 items-center">
+                                {roles.map((role) => (
+                                  <Badge
+                                    key={role.id}
+                                    variant={role.role === "admin" ? "default" : "secondary"}
+                                    className={`cursor-pointer ${
+                                      role.role === "admin" ? "bg-primary text-primary-foreground" : ""
+                                    }`}
+                                    onClick={() => handleRemoveRole(role.id, role.role)}
+                                    title={`Click to remove ${role.role} role`}
+                                  >
+                                    {role.role} ×
+                                  </Badge>
+                                ))}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="w-6 h-6"
+                                  onClick={() => openRoleDialog(profile.user_id)}
+                                  title="Add role"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell>{formatDate(profile.created_at)}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openRoleDialog(profile.user_id)}
+                                  title="Manage roles"
+                                >
+                                  <Shield className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditDialog(profile)}
+                                  title="Edit profile"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteProfile(profile)}
+                                  className="text-destructive hover:text-destructive"
+                                  title="Delete user"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile: stacked card view */}
+                <div className="md:hidden p-4 space-y-3">
                   {filteredProfiles.map((profile) => {
                     const roles = getUserRoles(profile.user_id);
                     return (
-                      <TableRow key={profile.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <UserCircle className="w-6 h-6 text-primary" />
+                      <div
+                        key={profile.id}
+                        className="border rounded-lg p-3 flex items-start justify-between gap-3 bg-card"
+                      >
+                        <div className="flex items-start gap-3">
+                          <Avatar>
+                            <AvatarFallback>
+                              <UserCircle className="w-5 h-5 text-primary" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{profile.full_name || "No name"}</div>
+                            <div className="text-sm text-muted-foreground">{profile.email || "-"}</div>
+                            <div className="text-sm text-muted-foreground">{profile.phone || "-"}</div>
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {roles.map((role) => (
+                                <Badge key={role.id} variant="secondary">
+                                  {role.role}
+                                </Badge>
+                              ))}
                             </div>
-                            <span className="font-medium">
-                              {profile.full_name || "No name"}
-                            </span>
                           </div>
-                        </TableCell>
-                        <TableCell>{profile.email || "-"}</TableCell>
-                        <TableCell>{profile.phone || "-"}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1 items-center">
-                            {roles.map((role) => (
-                              <Badge
-                                key={role.id}
-                                variant={role.role === "admin" ? "default" : "secondary"}
-                                className={`cursor-pointer ${
-                                  role.role === "admin"
-                                    ? "bg-primary text-primary-foreground"
-                                    : ""
-                                }`}
-                                onClick={() => handleRemoveRole(role.id, role.role)}
-                                title={`Click to remove ${role.role} role`}
-                              >
-                                {role.role} ×
-                              </Badge>
-                            ))}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-6 h-6"
-                              onClick={() => openRoleDialog(profile.user_id)}
-                              title="Add role"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatDate(profile.created_at)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openRoleDialog(profile.user_id)}
-                              title="Manage roles"
-                            >
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="text-sm text-muted-foreground">{formatDate(profile.created_at)}</div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openRoleDialog(profile.user_id)} title="Roles">
                               <Shield className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditDialog(profile)}
-                              title="Edit profile"
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(profile)} title="Edit">
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteProfile(profile)}
-                              className="text-destructive hover:text-destructive"
-                              title="Delete user"
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteProfile(profile)} className="text-destructive">
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

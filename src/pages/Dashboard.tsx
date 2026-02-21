@@ -154,31 +154,23 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top Navigation */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/5">
+      <header className="sticky top-0 z-50 bg-white/60 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link to="/dashboard" className="flex items-center gap-2 group">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-                <GraduationCap className="w-6 h-6 text-primary-foreground" />
+            <Link to="/dashboard" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-sm">
+                <GraduationCap className="w-6 h-6 text-white" />
               </div>
-              <div className="flex flex-col">
-                <span className="font-display text-lg font-bold text-foreground leading-tight">
-                  EduGuide
-                </span>
-                <span className="text-xs text-secondary font-semibold -mt-1">Zimbabwe</span>
+              <div className="hidden sm:block">
+                <span className="font-display text-lg font-bold text-foreground">EduGuide</span>
+                <div className="text-xs text-muted-foreground">Zimbabwe</div>
               </div>
             </Link>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <div className="relative">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative"
-                  onClick={() => setShowNotifications(!showNotifications)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => setShowNotifications(!showNotifications)} aria-label="Toggle notifications">
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
@@ -186,18 +178,14 @@ const Dashboard = () => {
                     </span>
                   )}
                 </Button>
-                
-                {/* Notifications Dropdown */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg z-50">
+                  <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg z-50" role="dialog" aria-label="Notifications">
                     <div className="p-3 border-b border-border">
                       <h3 className="font-semibold text-foreground">Notifications</h3>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="p-4 text-center text-muted-foreground">
-                          No new notifications
-                        </div>
+                        <div className="p-4 text-center text-muted-foreground">No new notifications</div>
                       ) : (
                         notifications.map((notification) => (
                           <div key={notification.id} className="p-3 border-b border-border last:border-0 hover:bg-muted/50">
@@ -206,12 +194,7 @@ const Dashboard = () => {
                                 <p className="font-medium text-sm text-foreground">{notification.title}</p>
                                 <p className="text-xs text-muted-foreground mt-1">{notification.message}</p>
                               </div>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6 flex-shrink-0"
-                                onClick={() => markNotificationRead(notification.id)}
-                              >
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => markNotificationRead(notification.id)} aria-label="Mark read">
                                 <X className="w-4 h-4" />
                               </Button>
                             </div>
@@ -222,12 +205,13 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
-              <Button variant="ghost" size="icon" asChild>
+
+              <Button variant="ghost" size="icon" asChild aria-label="Profile">
                 <Link to="/profile">
                   <User className="w-5 h-5" />
                 </Link>
               </Button>
-              <Button variant="ghost" size="icon" onClick={handleSignOut}>
+              <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sign out">
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
@@ -235,148 +219,154 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-2">
-            {getGreeting()}, {getUserName()}! 👋
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Here's your personalized academic guidance dashboard
-          </p>
-        </div>
+      <main className="container mx-auto px-4 py-6">
+        <section aria-labelledby="welcome" className="mb-6">
+          <div className="flex items-start gap-4 flex-col sm:flex-row sm:items-center">
+            <div>
+              <h1 id="welcome" className="font-display text-2xl sm:text-3xl font-bold text-foreground">{getGreeting()}, {getUserName()} 👋</h1>
+              <p className="text-sm text-muted-foreground mt-1">A clear path to your next steps — simple, smart, and tailored to you.</p>
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground">Profile</div>
+                <div className="font-semibold">{profile?.full_name ?? user?.user_metadata?.full_name ?? 'Student'}</div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        {/* Announcements Banner */}
-        {announcements.length > 0 && (
-          <Card className="mb-6 border-secondary/30 bg-secondary/5">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-start gap-3">
-                <Megaphone className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-foreground">{announcements[0].title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{announcements[0].content}</p>
+        <section className="mb-6">
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-r from-primary/80 to-accent/80 p-4 sm:p-6 text-white">
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 rounded-lg bg-white/10 flex items-center justify-center text-xl font-bold">{getUserName().charAt(0)}</div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold">Welcome back, {getUserName()}</h2>
+                  <p className="text-sm opacity-90 mt-1">Let's complete a few quick steps to get tailored recommendations.</p>
+                  <div className="mt-4 flex items-center gap-4">
+                    <div className="w-36">
+                      <Progress value={profileCompleteness} className="h-3 rounded-full bg-white/20" />
+                      <div className="text-xs mt-2">Profile {profileCompleteness}% complete</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button variant="secondary" size="sm" asChild>
+                        <Link to="/my-subjects">Add Subjects</Link>
+                      </Button>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to="/recommendations">See Matches</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="hidden sm:flex flex-col items-end">
+                  <div className="text-xs text-white/80">Unread</div>
+                  <div className="text-2xl font-bold mt-1">{unreadCount}</div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Profile Completeness */}
-        <Card className="mb-8 border-secondary/30 bg-gradient-to-r from-secondary/5 to-transparent">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-secondary" />
-                <span className="font-semibold text-foreground">Profile Completeness</span>
-              </div>
-              <span className="text-secondary font-bold">{profileCompleteness}%</span>
             </div>
-            <Progress value={profileCompleteness} className="h-2 mb-3" />
-            <p className="text-sm text-muted-foreground">
-              {profileCompleteness < 100 
-                ? "Complete your profile to get better recommendations" 
-                : "Great job! Your profile is complete"}
-            </p>
-          </CardContent>
-        </Card>
+          </Card>
+        </section>
+
+        <section className="mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Card className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center font-semibold text-primary">1</div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Add Subjects</h3>
+                  <p className="text-sm text-muted-foreground">Tell us what you study so we can match programs.</p>
+                  <div className="mt-3">
+                    <Button size="sm" asChild>
+                      <Link to="/my-subjects">Start</Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center font-semibold text-accent">2</div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Explore Matches</h3>
+                  <p className="text-sm text-muted-foreground">View recommended programs tailored to your subjects.</p>
+                  <div className="mt-3">
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to="/recommendations">View</Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-secondary/10 flex items-center justify-center font-semibold text-secondary">3</div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Apply & Track</h3>
+                  <p className="text-sm text-muted-foreground">Track deadlines and submit applications confidently.</p>
+                  <div className="mt-3">
+                    <Button size="sm" variant="ghost" asChild>
+                      <Link to="/universities">Browse</Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content - Quick Actions */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link to="/my-subjects">
-                <Card className="group hover:shadow-lg transition-all cursor-pointer border-primary/20 hover:border-primary/40 h-full">
-                  <CardContent className="pt-6">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <BookOpen className="w-6 h-6 text-primary" />
-                    </div>
-                    <h3 className="font-semibold text-foreground mb-1">My Subjects</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      {subjectCount > 0 ? `${subjectCount} subjects added` : "Add your subjects"}
-                    </p>
-                    <div className="flex items-center text-primary text-sm font-medium">
-                      {subjectCount > 0 ? "View & Edit" : "Get Started"}
-                      <ChevronRight className="w-4 h-4 ml-1" />
+                <Card className="group hover:shadow-lg transition-transform transform-gpu hover:-translate-y-1">
+                  <CardContent>
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <BookOpen className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">My Subjects</h4>
+                        <p className="text-sm text-muted-foreground">{subjectCount} subjects added</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </Link>
 
               <Link to="/recommendations">
-                <Card className="group hover:shadow-lg transition-all cursor-pointer border-accent/20 hover:border-accent/40 h-full">
-                  <CardContent className="pt-6">
-                    <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Target className="w-6 h-6 text-accent" />
-                    </div>
-                    <h3 className="font-semibold text-foreground mb-1">Recommendations</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Programs matched to you
-                    </p>
-                    <div className="flex items-center text-accent text-sm font-medium">
-                      View Matches
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link to="/universities">
-                <Card className="group hover:shadow-lg transition-all cursor-pointer border-secondary/20 hover:border-secondary/40 h-full">
-                  <CardContent className="pt-6">
-                    <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <GraduationCap className="w-6 h-6 text-secondary" />
-                    </div>
-                    <h3 className="font-semibold text-foreground mb-1">Universities</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Explore institutions
-                    </p>
-                    <div className="flex items-center text-secondary text-sm font-medium">
-                      Browse All
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Link to="/career-guidance">
-                <Card className="group hover:shadow-lg transition-all cursor-pointer border-destructive/20 hover:border-destructive/40 h-full">
-                  <CardContent className="pt-6">
-                    <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <TrendingUp className="w-6 h-6 text-destructive" />
-                    </div>
-                    <h3 className="font-semibold text-foreground mb-1">AI Career Guidance</h3>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Get personalized advice
-                    </p>
-                    <div className="flex items-center text-destructive text-sm font-medium">
-                      Get Recommendations
-                      <ChevronRight className="w-4 h-4 ml-1" />
+                <Card className="group hover:shadow-lg transition-transform transform-gpu hover:-translate-y-1">
+                  <CardContent>
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center">
+                        <Target className="w-6 h-6 text-accent" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">Recommendations</h4>
+                        <p className="text-sm text-muted-foreground">Programs matched to you</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </Link>
             </div>
 
-            {/* Getting Started Section */}
             {subjectCount === 0 && (
-              <Card className="bg-hero-gradient text-primary-foreground">
-                <CardContent className="pt-6 pb-6">
-                  <div className="flex flex-col md:flex-row items-center gap-6">
-                    <div className="w-20 h-20 rounded-2xl bg-secondary/20 flex items-center justify-center flex-shrink-0">
+              <Card>
+                <CardContent>
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl bg-secondary/20 flex items-center justify-center">
                       <Plus className="w-10 h-10 text-secondary" />
                     </div>
-                    <div className="flex-1 text-center md:text-left">
-                      <h3 className="font-display text-2xl font-bold mb-2">Start Your Journey</h3>
-                      <p className="text-primary-foreground/80 mb-4">
-                        Add your O-Level or A-Level subjects to get personalized university and career recommendations
-                      </p>
-                      <Button variant="hero" size="lg" asChild>
-                        <Link to="/my-subjects">
-                          Add Your Subjects
-                          <ChevronRight className="w-5 h-5 ml-2" />
-                        </Link>
-                      </Button>
+                    <div className="flex-1">
+                      <h3 className="font-display text-xl font-bold">Get tailored matches faster</h3>
+                      <p className="text-sm text-muted-foreground mt-2">Add your subjects to unlock university and career recommendations.</p>
+                      <div className="mt-3">
+                        <Button asChild>
+                          <Link to="/my-subjects">Add Subjects</Link>
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -384,51 +374,32 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Sidebar - Deadlines & Calendar */}
-          <div className="space-y-6">
-            {/* Upcoming Deadlines */}
+          <aside className="space-y-6">
             <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-primary" />
-                    Upcoming Deadlines
-                  </CardTitle>
-                </div>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2"><Calendar className="w-5 h-5 text-primary" />Upcoming Deadlines</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {deadlines.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No upcoming deadlines
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No upcoming deadlines</p>
                 ) : (
                   deadlines.slice(0, 4).map((deadline) => {
                     const remaining = getDaysRemaining(deadline.deadline_date);
                     return (
-                      <div 
-                        key={deadline.id} 
-                        className={`p-3 rounded-lg border ${remaining.urgent ? "border-destructive/30 bg-destructive/5" : "border-border bg-muted/30"}`}
-                      >
+                      <div key={deadline.id} className={`p-3 rounded-lg border ${remaining.urgent ? "border-destructive/30 bg-destructive/5" : "border-border bg-muted/30"}`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm text-foreground truncate">{deadline.title}</p>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge variant={remaining.urgent ? "destructive" : "secondary"} className="text-xs">
-                                {deadline.deadline_type}
-                              </Badge>
-                              {deadline.level && (
-                                <Badge variant="outline" className="text-xs">{deadline.level}</Badge>
-                              )}
+                              <Badge variant={remaining.urgent ? "destructive" : "secondary"} className="text-xs">{deadline.deadline_type}</Badge>
+                              {deadline.level && (<Badge variant="outline" className="text-xs">{deadline.level}</Badge>)}
                             </div>
                           </div>
                           <div className="text-right flex-shrink-0">
                             <div className={`flex items-center gap-1 text-xs ${remaining.urgent ? "text-destructive" : "text-muted-foreground"}`}>
-                              <Clock className="w-3 h-3" />
-                              {remaining.text}
+                              <Clock className="w-3 h-3" />{remaining.text}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {format(new Date(deadline.deadline_date), "MMM d")}
-                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(deadline.deadline_date), "MMM d")}</p>
                           </div>
                         </div>
                       </div>
@@ -438,7 +409,6 @@ const Dashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Quick Tips */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Quick Tips</CardTitle>
@@ -446,27 +416,21 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-primary font-bold">1</span>
-                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><span className="text-primary font-bold">1</span></div>
                   <div>
                     <h4 className="font-medium text-foreground">Add your subjects</h4>
                     <p className="text-sm text-muted-foreground">Include your grades for better recommendations</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-primary font-bold">2</span>
-                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><span className="text-primary font-bold">2</span></div>
                   <div>
                     <h4 className="font-medium text-foreground">Explore programs</h4>
                     <p className="text-sm text-muted-foreground">See which programs match your subjects</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-primary font-bold">3</span>
-                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><span className="text-primary font-bold">3</span></div>
                   <div>
                     <h4 className="font-medium text-foreground">Research careers</h4>
                     <p className="text-sm text-muted-foreground">Learn about career paths and requirements</p>
@@ -474,10 +438,9 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </aside>
         </div>
 
-        {/* Rating Section */}
         <Card className="mt-6">
           <CardContent className="pt-6 flex items-center justify-between">
             <div>
