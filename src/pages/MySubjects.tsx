@@ -23,7 +23,7 @@ const MySubjects = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [studentLevel, setStudentLevel] = useState<"O-Level" | "A-Level">("O-Level");
+  const [studentLevel, setStudentLevel] = useState<"O-Level" | "A-Level" | null>(null);
   const [addingLevel, setAddingLevel] = useState<"O-Level" | "A-Level">("O-Level");
   const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
   const [studentSubjects, setStudentSubjects] = useState<StudentSubject[]>([]);
@@ -49,7 +49,14 @@ const MySubjects = () => {
         supabase.from("student_subjects").select("*, subjects(*)").eq("user_id", userId),
       ]);
       setAvailableSubjects(subjectsRes.data || []);
-      setStudentSubjects(studentSubjectsRes.data || []);
+      const existing = studentSubjectsRes.data || [];
+      setStudentSubjects(existing);
+
+      // Auto-detect level if subjects already exist
+      if (existing.length > 0) {
+        const hasALevel = existing.some(s => s.level === "A-Level");
+        setStudentLevel(hasALevel ? "A-Level" : "O-Level");
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load subjects");
@@ -108,36 +115,35 @@ const MySubjects = () => {
   const oLevelSubjects = studentSubjects.filter(s => s.level === "O-Level");
   const aLevelSubjects = studentSubjects.filter(s => s.level === "A-Level");
 
-  const renderSubjectList = (subjects: StudentSubject[], level: string, icon: React.ReactNode, color: string) => (
+  const renderSubjectList = (subjects: StudentSubject[], level: string) => (
     subjects.length === 0 ? (
-      <div className="text-center py-8 text-muted-foreground">
-        {icon}
-        <p className="mt-3">No {level} subjects added yet</p>
-        <p className="text-sm">Add your subjects above to get started</p>
+      <div className="text-center py-10 text-muted-foreground">
+        <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
+        <p className="font-medium">No {level} subjects added yet</p>
+        <p className="text-sm mt-1">Use the form above to add your subjects</p>
       </div>
     ) : (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {subjects.map((studentSubject) => (
-          <div key={studentSubject.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+          <div key={studentSubject.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
-                {icon}
+              <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center text-xs font-bold text-muted-foreground">
+                {studentSubject.grade || "–"}
               </div>
               <div>
-                <h4 className="font-medium text-foreground">{studentSubject.subjects?.name || "Unknown Subject"}</h4>
-                {studentSubject.subjects?.code && <p className="text-sm text-muted-foreground">{studentSubject.subjects.code}</p>}
+                <h4 className="font-medium text-sm text-foreground">{studentSubject.subjects?.name || "Unknown"}</h4>
+                {studentSubject.subjects?.code && <p className="text-xs text-muted-foreground">{studentSubject.subjects.code}</p>}
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Select value={studentSubject.grade || ""} onValueChange={(grade) => handleUpdateGrade(studentSubject.id, grade)}>
-                <SelectTrigger className="w-20"><SelectValue placeholder="Grade" /></SelectTrigger>
+                <SelectTrigger className="w-[72px] h-8 text-xs"><SelectValue placeholder="Grade" /></SelectTrigger>
                 <SelectContent>
                   {grades.map((grade) => (<SelectItem key={grade} value={grade}>{grade}</SelectItem>))}
                 </SelectContent>
               </Select>
-              <Button variant="ghost" size="icon" onClick={() => handleRemoveSubject(studentSubject.id)}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                <Trash2 className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemoveSubject(studentSubject.id)}>
+                <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
           </div>
@@ -154,96 +160,122 @@ const MySubjects = () => {
     );
   }
 
+  // Level selection screen
+  if (studentLevel === null) {
+    return (
+      <div className="min-h-screen bg-secondary/30">
+        <header className="sticky top-0 z-50 bg-card border-b border-border">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center h-14 gap-3">
+              <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
+                <Link to="/dashboard"><ArrowLeft className="w-[18px] h-[18px]" /></Link>
+              </Button>
+              <span className="font-bold text-sm text-foreground">Add Subjects</span>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-12 max-w-lg">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-foreground">Select Your Academic Level</h1>
+            <p className="text-sm text-muted-foreground mt-2">Choose your current level to start adding subjects</p>
+          </div>
+
+          <div className="space-y-4">
+            <Card
+              className="border-2 border-border hover:border-primary/50 cursor-pointer transition-all hover:shadow-md"
+              onClick={() => { setStudentLevel("O-Level"); setAddingLevel("O-Level"); }}
+            >
+              <CardContent className="py-8 px-6 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-7 h-7 text-primary" />
+                </div>
+                <h2 className="text-lg font-bold text-foreground mb-1">O Level Student</h2>
+                <p className="text-sm text-muted-foreground">Enter your O-Level subjects and grades</p>
+                <Button className="mt-5 w-full" size="sm">Continue as O Level</Button>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="border-2 border-border hover:border-primary/50 cursor-pointer transition-all hover:shadow-md"
+              onClick={() => { setStudentLevel("A-Level"); setAddingLevel("O-Level"); }}
+            >
+              <CardContent className="py-8 px-6 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <GraduationCap className="w-7 h-7 text-primary" />
+                </div>
+                <h2 className="text-lg font-bold text-foreground mb-1">A Level Student</h2>
+                <p className="text-sm text-muted-foreground">Enter both O-Level and A-Level results</p>
+                <Button className="mt-5 w-full" size="sm">Continue as A Level</Button>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
+    <div className="min-h-screen bg-secondary/30">
+      <header className="sticky top-0 z-50 bg-card border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
-                <Link to="/dashboard"><ArrowLeft className="w-5 h-5" /></Link>
+          <div className="flex items-center justify-between h-14">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setStudentLevel(null)}>
+                <ArrowLeft className="w-[18px] h-[18px]" />
               </Button>
               <div>
-                <h1 className="font-display text-lg font-bold text-foreground">My Subjects</h1>
-                <p className="text-sm text-muted-foreground">Manage your academic subjects</p>
+                <h1 className="text-sm font-bold text-foreground">
+                  {studentLevel === "A-Level" ? "Add O-Level & A-Level Subjects" : "Add O-Level Subjects"}
+                </h1>
+                <p className="text-[11px] text-muted-foreground">Manage your academic results</p>
               </div>
             </div>
             <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <GraduationCap className="w-4 h-4 text-primary-foreground" />
+              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+                <GraduationCap className="w-3.5 h-3.5 text-primary-foreground" />
               </div>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Student Level Selection */}
-        <Card className="mb-6 border-primary/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Your Academic Level</CardTitle>
-            <CardDescription>Select your current level. A-Level students must enter both O-Level and A-Level results.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <Button
-                variant={studentLevel === "O-Level" ? "default" : "outline"}
-                onClick={() => setStudentLevel("O-Level")}
-                className="flex-1"
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                O-Level Student
-              </Button>
-              <Button
-                variant={studentLevel === "A-Level" ? "default" : "outline"}
-                onClick={() => setStudentLevel("A-Level")}
-                className="flex-1"
-              >
-                <GraduationCap className="w-4 h-4 mr-2" />
-                A-Level Student
-              </Button>
-            </div>
-            {studentLevel === "A-Level" && (
-              <div className="mt-3 p-3 rounded-lg bg-accent/10 border border-accent/20 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-accent mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-muted-foreground">
-                  As an A-Level student, you need to enter <strong>both</strong> your O-Level and A-Level results for accurate programme matching, since university entry requirements consider both.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Student Instructions */}
-        <Card className="mb-6 bg-primary/5 border-primary/20">
-          <CardContent className="pt-4 pb-4">
-            <p className="text-sm text-foreground font-medium mb-1">📋 Instructions</p>
+      <main className="container mx-auto px-4 py-6 max-w-2xl">
+        {/* Instructions */}
+        {studentLevel === "A-Level" && (
+          <div className="mb-5 p-3 rounded-xl bg-muted/60 border border-border flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
             <p className="text-xs text-muted-foreground">
-              Please enter your academic results accurately. The system will use this information to recommend programmes that best match your qualifications.
-              You must enter O-Level subjects and grades{studentLevel === "A-Level" ? ", A-Level subjects and grades" : ""}, and any diplomas or other qualifications if applicable.
-              Once submitted, the system will evaluate your results against all active programme requirements.
+              As an A-Level student, enter <strong>both</strong> your O-Level and A-Level results for accurate programme matching.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
-        {/* Add Subject Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" /> Add Subject</CardTitle>
-            <CardDescription>Select the level and add subjects with grades</CardDescription>
+        {/* Add Subject Form */}
+        <Card className="mb-6 border border-border shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Subject
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Select value={addingLevel} onValueChange={(v) => { setAddingLevel(v as "O-Level" | "A-Level"); setSelectedSubjectId(""); }}>
-                <SelectTrigger><SelectValue placeholder="Level" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="O-Level">O-Level</SelectItem>
-                  {studentLevel === "A-Level" && <SelectItem value="A-Level">A-Level</SelectItem>}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              {studentLevel === "A-Level" ? (
+                <Select value={addingLevel} onValueChange={(v) => { setAddingLevel(v as "O-Level" | "A-Level"); setSelectedSubjectId(""); }}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Level" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="O-Level">O-Level</SelectItem>
+                    <SelectItem value="A-Level">A-Level</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center px-3 text-sm text-muted-foreground bg-muted/50 rounded-lg border border-border">
+                  O-Level
+                </div>
+              )}
 
               <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
-                <SelectTrigger><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Select Subject" /></SelectTrigger>
                 <SelectContent>
                   {filteredSubjects.map((subject) => (
                     <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
@@ -252,14 +284,14 @@ const MySubjects = () => {
               </Select>
 
               <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                <SelectTrigger><SelectValue placeholder="Grade" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Grade" /></SelectTrigger>
                 <SelectContent>
                   {grades.map((grade) => (<SelectItem key={grade} value={grade}>{grade}</SelectItem>))}
                 </SelectContent>
               </Select>
 
-              <Button onClick={handleAddSubject} disabled={!selectedSubjectId || saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+              <Button onClick={handleAddSubject} disabled={!selectedSubjectId || saving} size="sm" className="h-9">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
                 Add
               </Button>
             </div>
@@ -268,86 +300,61 @@ const MySubjects = () => {
 
         {/* Subject Lists */}
         {studentLevel === "A-Level" ? (
-          <Tabs defaultValue="o-level" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="o-level">
-                O-Level Results ({oLevelSubjects.length})
+          <Tabs defaultValue="o-level" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2 h-9">
+              <TabsTrigger value="o-level" className="text-xs">
+                O-Level ({oLevelSubjects.length})
               </TabsTrigger>
-              <TabsTrigger value="a-level">
-                A-Level Results ({aLevelSubjects.length})
+              <TabsTrigger value="a-level" className="text-xs">
+                A-Level ({aLevelSubjects.length})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="o-level">
-              <Card>
-                <CardHeader>
+              <Card className="border border-border shadow-sm">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <BookOpen className="w-5 h-5 text-primary" /> O-Level Subjects
-                      </CardTitle>
-                      <CardDescription>Your O-Level results (required for entry requirements)</CardDescription>
-                    </div>
-                    <Badge variant="outline" className="text-primary border-primary">{oLevelSubjects.length} / 8 recommended</Badge>
+                    <CardTitle className="text-sm">O-Level Subjects</CardTitle>
+                    <Badge variant="outline" className="text-xs font-normal">{oLevelSubjects.length} added</Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  {renderSubjectList(oLevelSubjects, "O-Level",
-                    <BookOpen className="w-5 h-5 text-primary" />, "bg-primary/10")}
-                </CardContent>
+                <CardContent>{renderSubjectList(oLevelSubjects, "O-Level")}</CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="a-level">
-              <Card>
-                <CardHeader>
+              <Card className="border border-border shadow-sm">
+                <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <GraduationCap className="w-5 h-5 text-accent" /> A-Level Subjects
-                      </CardTitle>
-                      <CardDescription>Your A-Level results for programme matching</CardDescription>
-                    </div>
-                    <Badge variant="outline" className="text-accent border-accent">{aLevelSubjects.length} / 3 recommended</Badge>
+                    <CardTitle className="text-sm">A-Level Subjects</CardTitle>
+                    <Badge variant="outline" className="text-xs font-normal">{aLevelSubjects.length} added</Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  {renderSubjectList(aLevelSubjects, "A-Level",
-                    <GraduationCap className="w-5 h-5 text-accent" />, "bg-accent/10")}
-                </CardContent>
+                <CardContent>{renderSubjectList(aLevelSubjects, "A-Level")}</CardContent>
               </Card>
             </TabsContent>
           </Tabs>
         ) : (
-          /* O-Level Student - Only show O-Level subjects */
-          <Card>
-            <CardHeader>
+          <Card className="border border-border shadow-sm">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-primary" /> O-Level Subjects
-                  </CardTitle>
-                  <CardDescription>{oLevelSubjects.length} subjects added</CardDescription>
-                </div>
-                <Badge variant="outline" className="text-primary border-primary">{oLevelSubjects.length} / 8 recommended</Badge>
+                <CardTitle className="text-sm">O-Level Subjects</CardTitle>
+                <Badge variant="outline" className="text-xs font-normal">{oLevelSubjects.length} added</Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              {renderSubjectList(oLevelSubjects, "O-Level",
-                <BookOpen className="w-5 h-5 text-primary" />, "bg-primary/10")}
-            </CardContent>
+            <CardContent>{renderSubjectList(oLevelSubjects, "O-Level")}</CardContent>
           </Card>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex justify-between items-center mt-8">
-          <Button variant="outline" asChild>
-            <Link to="/dashboard"><ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard</Link>
+        {/* Bottom Actions */}
+        <div className="flex justify-between items-center mt-6">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/dashboard"><ArrowLeft className="w-4 h-4 mr-1.5" /> Dashboard</Link>
           </Button>
-          <Button asChild>
+          <Button size="sm" asChild>
             <Link to="/recommendations">
-              View Recommendations
-              <GraduationCap className="w-4 h-4 ml-2" />
+              Get Recommendations
+              <GraduationCap className="w-4 h-4 ml-1.5" />
             </Link>
           </Button>
         </div>
