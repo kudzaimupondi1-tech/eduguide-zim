@@ -66,10 +66,10 @@ export function AdminSidebar() {
         <SidebarMenuButton asChild>
           <Link
             to={item.url}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm ${
               isActive
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                ? "bg-primary/10 text-primary font-medium"
+                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
             }`}
           >
             <item.icon className="w-5 h-5" />
@@ -84,19 +84,19 @@ export function AdminSidebar() {
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link to="/admin" className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <GraduationCap className="w-6 h-6 text-sidebar-primary-foreground" />
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+            <GraduationCap className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-lg font-display font-bold text-sidebar-foreground">EduGuide</h1>
-            <p className="text-xs text-sidebar-foreground/70">Admin Panel</p>
+            <h1 className="text-base font-bold text-sidebar-foreground">EduGuide</h1>
+            <p className="text-[10px] text-sidebar-foreground/50">Admin Panel</p>
           </div>
         </Link>
       </SidebarHeader>
 
       <SidebarContent className="overflow-y-auto">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50">Data Management</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/40 text-xs uppercase tracking-wide">Data Management</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {dataMenuItems.map(renderMenuItem)}
@@ -105,7 +105,7 @@ export function AdminSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50">System</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/40 text-xs uppercase tracking-wide">System</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {systemMenuItems.map(renderMenuItem)}
@@ -115,17 +115,18 @@ export function AdminSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           <Link to="/dashboard">
-            <Button variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50">
+            <Button variant="ghost" size="sm" className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground">
               <GraduationCap className="w-4 h-4 mr-2" />
               Student View
             </Button>
           </Link>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleLogout}
-            className="w-full justify-start text-sidebar-foreground/80 hover:text-destructive hover:bg-destructive/10"
+            className="w-full justify-start text-sidebar-foreground/70 hover:text-destructive hover:bg-destructive/10"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
