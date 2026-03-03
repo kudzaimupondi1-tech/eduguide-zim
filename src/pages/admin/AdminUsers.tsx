@@ -60,6 +60,7 @@ export default function AdminUsers() {
   const [newRole, setNewRole] = useState("student");
   const [editForm, setEditForm] = useState({ full_name: "", email: "", phone: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -150,7 +151,6 @@ export default function AdminUsers() {
     setIsSubmitting(true);
 
     try {
-      // Check if role already exists
       const existing = userRoles.find(
         (r) => r.user_id === selectedUserId && r.role === newRole
       );
@@ -191,24 +191,29 @@ export default function AdminUsers() {
     }
   };
 
-  const handleDeleteProfile = async (profile: Profile) => {
-    if (!confirm(`Are you sure you want to delete the profile for "${profile.full_name || profile.email || "this user"}"?`)) return;
+  // HARD DELETE: permanently removes user from auth + all data
+  const handleDeleteUser = async (profile: Profile) => {
+    if (!confirm(`⚠️ PERMANENT DELETE\n\nAre you sure you want to permanently delete "${profile.full_name || profile.email || "this user"}"?\n\nThis action cannot be undone. The user will be removed from the system entirely and will need to register again.`)) return;
 
+    setIsDeletingUser(profile.user_id);
     try {
-      // Remove all roles first
-      await supabase.from("user_roles").delete().eq("user_id", profile.user_id);
-      // Remove student subjects
-      await supabase.from("student_subjects").delete().eq("user_id", profile.user_id);
-      // Remove notifications
-      await supabase.from("student_notifications").delete().eq("user_id", profile.user_id);
-      // Remove profile
-      const { error } = await supabase.from("profiles").delete().eq("id", profile.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("delete-user", {
+        body: { user_id: profile.user_id },
+      });
+
       if (error) throw error;
-      toast({ title: "Success", description: "User profile deleted" });
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: "User Deleted", description: "User has been permanently removed from the system." });
       fetchData();
-    } catch (error) {
-      console.error("Error deleting profile:", error);
-      toast({ title: "Error", description: "Failed to delete profile", variant: "destructive" });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      toast({ title: "Error", description: error.message || "Failed to delete user", variant: "destructive" });
+    } finally {
+      setIsDeletingUser(null);
     }
   };
 
@@ -291,7 +296,7 @@ export default function AdminUsers() {
               </div>
             ) : (
               <>
-                {/* Desktop / Tablet: table view */}
+                {/* Desktop table */}
                 <div className="hidden md:block">
                   <Table>
                     <TableHeader>
@@ -369,11 +374,16 @@ export default function AdminUsers() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleDeleteProfile(profile)}
+                                  onClick={() => handleDeleteUser(profile)}
                                   className="text-destructive hover:text-destructive"
-                                  title="Delete user"
+                                  title="Permanently delete user"
+                                  disabled={isDeletingUser === profile.user_id}
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  {isDeletingUser === profile.user_id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
                                 </Button>
                               </div>
                             </TableCell>
@@ -384,7 +394,7 @@ export default function AdminUsers() {
                   </Table>
                 </div>
 
-                {/* Mobile: stacked card view */}
+                {/* Mobile card view */}
                 <div className="md:hidden p-4 space-y-3">
                   {filteredProfiles.map((profile) => {
                     const roles = getUserRoles(profile.user_id);
@@ -421,8 +431,18 @@ export default function AdminUsers() {
                             <Button variant="ghost" size="icon" onClick={() => openEditDialog(profile)} title="Edit">
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteProfile(profile)} className="text-destructive">
-                              <Trash2 className="w-4 h-4" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteUser(profile)}
+                              className="text-destructive"
+                              disabled={isDeletingUser === profile.user_id}
+                            >
+                              {isDeletingUser === profile.user_id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
                             </Button>
                           </div>
                         </div>

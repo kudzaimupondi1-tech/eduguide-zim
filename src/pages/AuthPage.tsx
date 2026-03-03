@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, GraduationCap, Mail, Lock, User, Users } from "lucide-react";
+import { Eye, EyeOff, GraduationCap, Mail, Lock, User, Users, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,9 +19,9 @@ const AuthPage = () => {
     email: "",
     password: "",
     role: "student" as "student" | "admin",
+    accessCode: "",
   });
 
-  // Check if user is already logged in
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
@@ -74,6 +74,7 @@ const AuthPage = () => {
           await redirectBasedOnRole(data.user.id);
         }
       } else {
+        // Sign up
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -93,16 +94,40 @@ const AuthPage = () => {
           throw error;
         }
         
-        // With auto-confirm enabled, user is logged in immediately
-        if (data.session) {
-          toast.success("Account created successfully!");
-          
-          // If they selected admin role, we need to inform them about approval
+        if (data.session && data.user) {
+          // If admin role selected, validate access code
           if (formData.role === "admin") {
-            toast.info("Admin access requires approval. You've been registered as a student for now.");
+            if (!formData.accessCode.trim()) {
+              // Sign out the user since they can't be admin without code
+              toast.error("Admin Access Code is required for admin registration.");
+              setIsLoading(false);
+              return;
+            }
+
+            try {
+              const { data: validationResult, error: validationError } = await supabase.functions.invoke("validate-admin-code", {
+                body: { access_code: formData.accessCode, user_id: data.user.id },
+              });
+
+              if (validationError) throw validationError;
+              
+              if (!validationResult?.valid) {
+                toast.error(validationResult?.error || "Invalid access code. You have been registered as a student.");
+                await redirectBasedOnRole(data.user.id);
+                return;
+              }
+
+              toast.success("Admin account created successfully!");
+              await redirectBasedOnRole(data.user.id);
+            } catch (codeError: any) {
+              console.error("Access code validation error:", codeError);
+              toast.error("Invalid access code. You have been registered as a student.");
+              await redirectBasedOnRole(data.user.id);
+            }
+          } else {
+            toast.success("Account created successfully!");
+            await redirectBasedOnRole(data.user.id);
           }
-          
-          await redirectBasedOnRole(data.user!.id);
         } else {
           toast.success("Account created! Please check your email to confirm.");
         }
@@ -170,7 +195,7 @@ const AuthPage = () => {
                     <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
                     <Select 
                       value={formData.role} 
-                      onValueChange={(value: "student" | "admin") => setFormData({ ...formData, role: value })}
+                      onValueChange={(value: "student" | "admin") => setFormData({ ...formData, role: value, accessCode: "" })}
                     >
                       <SelectTrigger className="pl-10">
                         <SelectValue placeholder="Select your role" />
@@ -191,12 +216,28 @@ const AuthPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  {formData.role === "admin" && (
-                    <p className="text-xs text-muted-foreground">
-                      Note: Admin access requires approval from an existing administrator.
-                    </p>
-                  )}
                 </div>
+
+                {formData.role === "admin" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="accessCode">Admin Access Code</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                      <Input
+                        id="accessCode"
+                        type="password"
+                        placeholder="Enter admin access code"
+                        className="pl-10"
+                        value={formData.accessCode}
+                        onChange={(e) => setFormData({ ...formData, accessCode: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      An access code from an existing administrator is required.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 
@@ -277,7 +318,6 @@ const AuthPage = () => {
 
       {/* Right Panel - Visual */}
       <div className="hidden lg:flex flex-1 bg-hero-gradient items-center justify-center p-12 relative overflow-hidden">
-        {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-secondary blur-3xl" />
           <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-accent blur-3xl" />
@@ -295,7 +335,6 @@ const AuthPage = () => {
             Join thousands of Zimbabwean students who have found their path to success with EduGuide.
           </p>
 
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-6 mt-12 pt-12 border-t border-primary-foreground/20">
             <div>
               <div className="text-2xl font-bold text-secondary">5K+</div>

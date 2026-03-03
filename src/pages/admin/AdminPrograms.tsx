@@ -44,6 +44,7 @@ interface Subject {
   id: string;
   name: string;
   level: string;
+  category: string | null;
 }
 
 interface Program {
@@ -136,7 +137,7 @@ export default function AdminPrograms() {
       const [programsRes, universitiesRes, subjectsRes] = await Promise.all([
         supabase.from("programs").select("*, universities(name)").order("name"),
         supabase.from("universities").select("id, name").eq("is_active", true).order("name"),
-        supabase.from("subjects").select("id, name, level").eq("is_active", true).order("name"),
+        supabase.from("subjects").select("id, name, level, category").eq("is_active", true).order("name"),
       ]);
 
       if (programsRes.error) throw programsRes.error;
@@ -198,7 +199,13 @@ export default function AdminPrograms() {
       }
       setIsDialogOpen(false);
       resetForm();
-      fetchData();
+      // Don't call fetchData here for updates - preserve scroll position
+      if (editingProgram) {
+        // Update locally to avoid scroll reset
+        setPrograms(prev => prev.map(p => p.id === editingProgram.id ? { ...p, ...formData, universities: p.universities } : p));
+      } else {
+        fetchData();
+      }
     } catch (error) {
       console.error("Error saving program:", error);
       toast({ title: "Error", description: "Failed to save program", variant: "destructive" });
@@ -859,12 +866,16 @@ export default function AdminPrograms() {
                         </div>
                       )}
                       <div className="grid gap-2 max-h-[40vh] overflow-y-auto border rounded p-2">
-                        {Array.from(new Set(subjects.map(s => s.name))).map((subjectName) => (
+                        {Array.from(new Set(subjects.map(s => s.name))).map((subjectName) => {
+                          const subjectData = subjects.find(s => s.name === subjectName);
+                          const category = subjectData?.category || subjectData?.level || "";
+                          return (
                           <div key={subjectName} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-muted/50 ${tempSelectedSubjects.includes(subjectName) ? 'bg-primary/5' : ''}`}>
                             <Checkbox checked={tempSelectedSubjects.includes(subjectName)} onCheckedChange={() => toggleTempSubject(subjectName)} />
-                            <div className="flex-1">{subjectName}</div>
+                            <div className="flex-1">{subjectName} {category && <span className="text-xs text-muted-foreground">({category})</span>}</div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                       <div className="grid gap-2 md:grid-cols-3">
                         <Input placeholder="Add new subject (e.g. Further Mathematics)" value={newSubjectName} onChange={(e) => setNewSubjectName(e.target.value)} />

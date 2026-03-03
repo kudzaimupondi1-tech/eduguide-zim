@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Settings, Shield, Database, Bell, Save, ThumbsUp, ThumbsDown, UserX, Loader2 } from "lucide-react";
+import { Settings, Shield, Database, Bell, Save, ThumbsUp, ThumbsDown, UserX, Loader2, KeyRound } from "lucide-react";
 
 interface SystemSettings {
   maintenance_mode: boolean;
@@ -19,6 +19,7 @@ interface SystemSettings {
   notification_email: string;
   backup_frequency: string;
   idle_account_days: number;
+  admin_access_code: string;
 }
 
 interface RatingStats {
@@ -36,6 +37,7 @@ export default function AdminSettings() {
     notification_email: "",
     backup_frequency: "daily",
     idle_account_days: 10,
+    admin_access_code: "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isRunningCleanup, setIsRunningCleanup] = useState(false);
@@ -64,6 +66,7 @@ export default function AdminSettings() {
         notification_email: settingsMap.notifications?.admin_email || "",
         backup_frequency: settingsMap.backup?.frequency || "daily",
         idle_account_days: settingsMap.idle_account_days?.days || 10,
+        admin_access_code: settingsMap.admin_access_code?.code || "",
       });
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -92,6 +95,7 @@ export default function AdminSettings() {
         { setting_key: "notifications", setting_value: { admin_email: settings.notification_email }, category: "notifications" },
         { setting_key: "backup", setting_value: { frequency: settings.backup_frequency }, category: "system" },
         { setting_key: "idle_account_days", setting_value: { days: settings.idle_account_days }, category: "system" },
+        { setting_key: "admin_access_code", setting_value: { code: settings.admin_access_code }, category: "security" },
       ];
 
       for (const setting of settingsToSave) {
@@ -203,6 +207,21 @@ export default function AdminSettings() {
                     <p className="text-sm text-muted-foreground mt-1">Users must verify their email before accessing the system</p>
                   </div>
                   <Switch checked={settings.require_email_verification} onCheckedChange={(checked) => setSettings({ ...settings, require_email_verification: checked })} />
+                </div>
+                <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-primary" />
+                    <Label className="font-medium">Admin Access Code</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Users registering as admin must provide this code. Leave empty to disable admin self-registration.
+                  </p>
+                  <Input
+                    type="text"
+                    value={settings.admin_access_code}
+                    onChange={(e) => setSettings({ ...settings, admin_access_code: e.target.value })}
+                    placeholder="Enter a secure access code"
+                  />
                 </div>
               </CardContent>
             </Card>

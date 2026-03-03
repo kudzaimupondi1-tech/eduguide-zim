@@ -13,7 +13,8 @@ import {
   Star,
   ExternalLink,
   Lightbulb,
-  TrendingUp
+  TrendingUp,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -77,6 +84,7 @@ const Recommendations = () => {
   const [selectedUniversityIds, setSelectedUniversityIds] = useState<string[]>([]);
   const [universities, setUniversities] = useState<Tables<"universities">[]>([]);
   const [activeTab, setActiveTab] = useState<string>("recommendations");
+  const [selectedProgramDetail, setSelectedProgramDetail] = useState<(Program & { matchData: ReturnType<typeof calculateMatchScore> }) | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -843,30 +851,6 @@ const Recommendations = () => {
                       )}
                     </div>
 
-                    {/* Subject Requirements with Grade Matching */}
-                    {program.matchData.total > 0 && (
-                      <div className="mb-4">
-                        <p className="text-xs font-medium text-foreground mb-2">
-                          Requirements ({program.matchData.matched}/{program.matchData.total} met):
-                        </p>
-                        <div className="space-y-1 text-xs">
-                          {program.matchData.details.slice(0, 4).map((detail, idx) => (
-                            <div 
-                              key={idx} 
-                              className={`${detail.startsWith("✓") ? "text-accent" : "text-destructive"}`}
-                            >
-                              {detail}
-                            </div>
-                          ))}
-                          {program.matchData.details.length > 4 && (
-                            <div className="text-muted-foreground">
-                              +{program.matchData.details.length - 4} more requirements
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" className="flex-1" asChild>
                         <Link to={`/universities`}>
@@ -874,7 +858,7 @@ const Recommendations = () => {
                           <ExternalLink className="w-4 h-4 ml-2" />
                         </Link>
                       </Button>
-                      <Button size="sm" className="flex-1">
+                      <Button size="sm" className="flex-1" onClick={() => setSelectedProgramDetail(program)}>
                         Learn More
                         <ChevronRight className="w-4 h-4 ml-2" />
                       </Button>
@@ -922,6 +906,100 @@ const Recommendations = () => {
           </Button>
         </div>
       </main>
+
+      {/* Program Detail Dialog */}
+      <Dialog open={!!selectedProgramDetail} onOpenChange={(open) => { if (!open) setSelectedProgramDetail(null); }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {selectedProgramDetail && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl">{selectedProgramDetail.name}</DialogTitle>
+                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                  <GraduationCap className="w-4 h-4" />
+                  {selectedProgramDetail.universities?.name}
+                </p>
+              </DialogHeader>
+              <div className="space-y-5">
+                {/* Match Score */}
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/50">
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold ${
+                    selectedProgramDetail.matchData.score >= 80 
+                      ? 'bg-accent text-accent-foreground' 
+                      : selectedProgramDetail.matchData.score >= 50 
+                        ? 'bg-secondary text-secondary-foreground' 
+                        : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {selectedProgramDetail.matchData.score}%
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Match Score</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedProgramDetail.matchData.score >= 80 ? "Great match for your qualifications" : 
+                       selectedProgramDetail.matchData.score >= 50 ? "Partial match" : "Low match"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Program Info */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {selectedProgramDetail.universities?.location && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="w-4 h-4" /> {selectedProgramDetail.universities.location}
+                    </div>
+                  )}
+                  {selectedProgramDetail.duration_years && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-4 h-4" /> {selectedProgramDetail.duration_years} years
+                    </div>
+                  )}
+                  {selectedProgramDetail.faculty && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <BookOpen className="w-4 h-4" /> {selectedProgramDetail.faculty}
+                    </div>
+                  )}
+                  {selectedProgramDetail.degree_type && (
+                    <Badge variant="outline" className="w-fit">{selectedProgramDetail.degree_type}</Badge>
+                  )}
+                </div>
+
+                {selectedProgramDetail.description && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-1">Description</h4>
+                    <p className="text-sm text-muted-foreground">{selectedProgramDetail.description}</p>
+                  </div>
+                )}
+
+                {/* Requirements Met */}
+                {selectedProgramDetail.matchData.details.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Requirements Analysis ({selectedProgramDetail.matchData.matched}/{selectedProgramDetail.matchData.total} met)</h4>
+                    <div className="space-y-1.5 text-xs">
+                      {selectedProgramDetail.matchData.details.map((detail, idx) => (
+                        <div key={idx} className={`p-2 rounded ${detail.startsWith("✓") ? "bg-accent/10 text-accent" : detail.startsWith("✗") ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+                          {detail}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedProgramDetail.entry_requirements && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-1">Entry Requirements</h4>
+                    <p className="text-sm text-muted-foreground">{selectedProgramDetail.entry_requirements}</p>
+                  </div>
+                )}
+
+                <Button className="w-full" asChild>
+                  <Link to="/universities">
+                    View University <ExternalLink className="w-4 h-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

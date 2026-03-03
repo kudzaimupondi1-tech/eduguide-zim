@@ -141,15 +141,10 @@ export const StudentChatbot = () => {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-        <div className="bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg p-3 max-w-xs animate-fadeUp hidden md:block">
-          <p className="text-sm text-foreground">
-            👋 Need help with subjects, universities, or careers? <strong>Ask me!</strong>
-          </p>
-        </div>
+      <div className="fixed bottom-6 right-6 z-50">
         <Button
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 animate-bounce-slow"
+          className="w-14 h-14 rounded-full shadow-lg bg-primary hover:bg-primary/90"
           size="icon"
         >
           <MessageCircle className="w-6 h-6" />

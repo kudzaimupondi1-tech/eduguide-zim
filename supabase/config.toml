@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.cleanup-idle-accounts]
 verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.validate-admin-code]
+verify_jwt = false
