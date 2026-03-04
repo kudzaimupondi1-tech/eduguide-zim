@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
+import { useLocation } from "react-router-dom";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -21,7 +22,11 @@ const INITIAL_MESSAGE: Message = {
   content: "Hi! 👋 I'm your **EduGuide Assistant**. I can help you with:\n\n• 📚 Subject selection for O-Level and A-Level\n• 🎓 University information and entry requirements\n• 💼 Career guidance and pathways\n• 📝 Study tips and exam preparation\n\nHow can I help you today?"
 };
 
+// Only show chatbot on student pages (not landing, auth, or admin)
+const STUDENT_ROUTES = ["/dashboard", "/my-subjects", "/recommendations", "/universities", "/careers", "/career-guidance", "/profile"];
+
 export const StudentChatbot = () => {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
@@ -29,6 +34,9 @@ export const StudentChatbot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Check if current route is a student route
+  const isStudentRoute = STUDENT_ROUTES.some(route => location.pathname.startsWith(route));
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -138,6 +146,9 @@ export const StudentChatbot = () => {
       sendMessage();
     }
   };
+
+  // Don't render on non-student routes
+  if (!isStudentRoute) return null;
 
   if (!isOpen) {
     return (
@@ -249,7 +260,7 @@ export const StudentChatbot = () => {
             </div>
           </ScrollArea>
 
-          {/* Quick Actions - Show only when there are few messages */}
+          {/* Quick Actions */}
           {messages.length <= 2 && !isLoading && (
             <div className="px-4 pb-2">
               <p className="text-xs text-muted-foreground mb-2">Quick questions:</p>

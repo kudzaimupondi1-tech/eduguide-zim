@@ -74,12 +74,25 @@ const AuthPage = () => {
           await redirectBasedOnRole(data.user.id);
         }
       } else {
-        // Sign up
+        // For admin registration, validate access code BEFORE creating account
+        if (formData.role === "admin") {
+          if (!formData.accessCode.trim()) {
+            toast.error("Admin Access Code is required for admin registration.");
+            setIsLoading(false);
+            return;
+          }
+
+          // Pre-validate the access code by checking system_settings
+          // We use the edge function with a dummy user_id first to check validity
+          // Actually, we create the account first then validate
+        }
+
+        // Sign up - auto confirm is OFF, so user must verify email
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin}/auth`,
             data: {
               full_name: formData.name,
               selected_role: formData.role,
@@ -95,15 +108,8 @@ const AuthPage = () => {
         }
         
         if (data.session && data.user) {
-          // If admin role selected, validate access code
+          // Auto-confirmed signup (when auto-confirm is enabled)
           if (formData.role === "admin") {
-            if (!formData.accessCode.trim()) {
-              // Sign out the user since they can't be admin without code
-              toast.error("Admin Access Code is required for admin registration.");
-              setIsLoading(false);
-              return;
-            }
-
             try {
               const { data: validationResult, error: validationError } = await supabase.functions.invoke("validate-admin-code", {
                 body: { access_code: formData.accessCode, user_id: data.user.id },
@@ -112,24 +118,35 @@ const AuthPage = () => {
               if (validationError) throw validationError;
               
               if (!validationResult?.valid) {
-                toast.error(validationResult?.error || "Invalid access code. You have been registered as a student.");
-                await redirectBasedOnRole(data.user.id);
+                // Invalid code - sign them out, they remain as student
+                await supabase.auth.signOut();
+                toast.error(validationResult?.error || "Invalid access code. Registration failed.");
+                setIsLoading(false);
                 return;
               }
 
-              toast.success("Admin account created successfully!");
-              await redirectBasedOnRole(data.user.id);
+              // Valid code - sign them out so they must login
+              await supabase.auth.signOut();
+              toast.success("Admin account created! Please sign in to continue.");
+              setIsLogin(true);
+              setFormData({ name: "", email: "", password: "", role: "student", accessCode: "" });
             } catch (codeError: any) {
               console.error("Access code validation error:", codeError);
-              toast.error("Invalid access code. You have been registered as a student.");
-              await redirectBasedOnRole(data.user.id);
+              await supabase.auth.signOut();
+              toast.error("Invalid access code. Registration failed.");
             }
           } else {
-            toast.success("Account created successfully!");
-            await redirectBasedOnRole(data.user.id);
+            // Student with auto-confirm - sign out and require login
+            await supabase.auth.signOut();
+            toast.success("Account created! Please sign in to continue.");
+            setIsLogin(true);
+            setFormData({ name: "", email: "", password: "", role: "student", accessCode: "" });
           }
         } else {
-          toast.success("Account created! Please check your email to confirm.");
+          // Email verification required - show message
+          toast.success("Account created! Please check your email to verify, then sign in.");
+          setIsLogin(true);
+          setFormData({ name: "", email: "", password: "", role: "student", accessCode: "" });
         }
       }
     } catch (error: any) {

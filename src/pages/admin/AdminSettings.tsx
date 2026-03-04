@@ -40,6 +40,7 @@ export default function AdminSettings() {
     admin_access_code: "",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingCode, setIsSavingCode] = useState(false);
   const [isRunningCleanup, setIsRunningCleanup] = useState(false);
   const [ratingStats, setRatingStats] = useState<RatingStats>({ likes: 0, dislikes: 0, total: 0 });
 
@@ -95,7 +96,6 @@ export default function AdminSettings() {
         { setting_key: "notifications", setting_value: { admin_email: settings.notification_email }, category: "notifications" },
         { setting_key: "backup", setting_value: { frequency: settings.backup_frequency }, category: "system" },
         { setting_key: "idle_account_days", setting_value: { days: settings.idle_account_days }, category: "system" },
-        { setting_key: "admin_access_code", setting_value: { code: settings.admin_access_code }, category: "security" },
       ];
 
       for (const setting of settingsToSave) {
@@ -109,6 +109,27 @@ export default function AdminSettings() {
       toast.error("Failed to save settings");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveAccessCode = async () => {
+    if (!settings.admin_access_code.trim()) {
+      toast.error("Please enter an access code");
+      return;
+    }
+    setIsSavingCode(true);
+    try {
+      const { error } = await supabase.from("system_settings").upsert(
+        { setting_key: "admin_access_code", setting_value: { code: settings.admin_access_code }, category: "security" },
+        { onConflict: "setting_key" }
+      );
+      if (error) throw error;
+      toast.success("Admin access code saved successfully");
+    } catch (error) {
+      console.error("Error saving access code:", error);
+      toast.error("Failed to save access code");
+    } finally {
+      setIsSavingCode(false);
     }
   };
 
@@ -217,11 +238,15 @@ export default function AdminSettings() {
                     Users registering as admin must provide this code. Leave empty to disable admin self-registration.
                   </p>
                   <Input
-                    type="text"
+                    type="password"
                     value={settings.admin_access_code}
                     onChange={(e) => setSettings({ ...settings, admin_access_code: e.target.value })}
                     placeholder="Enter a secure access code"
                   />
+                  <Button onClick={handleSaveAccessCode} disabled={isSavingCode} size="sm" className="mt-2">
+                    <Save className="w-3.5 h-3.5 mr-1.5" />
+                    {isSavingCode ? "Saving..." : "Save Access Code"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
