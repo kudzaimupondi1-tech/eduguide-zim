@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { 
   GraduationCap, 
   BookOpen, 
-  Target, 
   User,
   LogOut,
   Bell,
@@ -60,7 +59,6 @@ const Dashboard = () => {
 
   const fetchUserData = async (userId: string) => {
     try {
-      // Update last_active_at for idle tracking
       supabase.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("user_id", userId).then();
 
       const [profileRes, subjectCountRes, notificationsRes] = await Promise.all([
@@ -132,7 +130,6 @@ const Dashboard = () => {
             </Link>
 
             <div className="flex items-center gap-1">
-              {/* Notifications */}
               <div className="relative">
                 <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowNotifications(!showNotifications)}>
                   <Bell className="w-[18px] h-[18px]" />
@@ -182,7 +179,7 @@ const Dashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
-        {/* Hero Section — Informational Only */}
+        {/* Hero Section */}
         <section className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
             {getGreeting()}, {getUserName()} 👋
@@ -225,10 +222,10 @@ const Dashboard = () => {
               </div>
               <h3 className="font-semibold text-foreground mb-1.5">My Subjects</h3>
               <p className="text-sm text-muted-foreground flex-1 mb-4">
-                View and edit the subjects you have already added.
+                View the subjects you have already added.
               </p>
               <Button size="sm" variant="outline" asChild className="w-full">
-                <Link to="/my-subjects">View</Link>
+                <Link to="/view-subjects">View</Link>
               </Button>
             </CardContent>
           </Card>

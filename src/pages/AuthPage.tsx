@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff, GraduationCap, Mail, Lock, User, Users, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const isSigningUp = useRef(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -24,12 +25,15 @@ const AuthPage = () => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Don't redirect during signup process
+      if (isSigningUp.current) return;
       if (session?.user) {
         await redirectBasedOnRole(session.user.id);
       }
     });
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (isSigningUp.current) return;
       if (session?.user) {
         await redirectBasedOnRole(session.user.id);
       }
@@ -74,20 +78,19 @@ const AuthPage = () => {
           await redirectBasedOnRole(data.user.id);
         }
       } else {
-        // For admin registration, validate access code BEFORE creating account
+        // Block auth state listener during signup
+        isSigningUp.current = true;
+
+        // For admin registration, validate access code requirement
         if (formData.role === "admin") {
           if (!formData.accessCode.trim()) {
             toast.error("Admin Access Code is required for admin registration.");
+            isSigningUp.current = false;
             setIsLoading(false);
             return;
           }
-
-          // Pre-validate the access code by checking system_settings
-          // We use the edge function with a dummy user_id first to check validity
-          // Actually, we create the account first then validate
         }
 
-        // Sign up - auto confirm is OFF, so user must verify email
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -101,6 +104,7 @@ const AuthPage = () => {
         });
 
         if (error) {
+          isSigningUp.current = false;
           if (error.message.includes("already registered")) {
             throw new Error("This email is already registered. Please sign in instead.");
           }
@@ -108,7 +112,7 @@ const AuthPage = () => {
         }
         
         if (data.session && data.user) {
-          // Auto-confirmed signup (when auto-confirm is enabled)
+          // Auto-confirmed signup
           if (formData.role === "admin") {
             try {
               const { data: validationResult, error: validationError } = await supabase.functions.invoke("validate-admin-code", {
@@ -118,38 +122,43 @@ const AuthPage = () => {
               if (validationError) throw validationError;
               
               if (!validationResult?.valid) {
-                // Invalid code - sign them out, they remain as student
                 await supabase.auth.signOut();
+                isSigningUp.current = false;
                 toast.error(validationResult?.error || "Invalid access code. Registration failed.");
                 setIsLoading(false);
                 return;
               }
 
-              // Valid code - sign them out so they must login
+              // Valid code - sign out so they must login
               await supabase.auth.signOut();
-              toast.success("Admin account created! Please sign in to continue.");
+              isSigningUp.current = false;
+              toast.success("Admin account created successfully! Please sign in to continue.");
               setIsLogin(true);
               setFormData({ name: "", email: "", password: "", role: "student", accessCode: "" });
             } catch (codeError: any) {
               console.error("Access code validation error:", codeError);
               await supabase.auth.signOut();
+              isSigningUp.current = false;
               toast.error("Invalid access code. Registration failed.");
             }
           } else {
             // Student with auto-confirm - sign out and require login
             await supabase.auth.signOut();
-            toast.success("Account created! Please sign in to continue.");
+            isSigningUp.current = false;
+            toast.success("Account created successfully! Please sign in to continue.");
             setIsLogin(true);
             setFormData({ name: "", email: "", password: "", role: "student", accessCode: "" });
           }
         } else {
-          // Email verification required - show message
+          // Email verification required
+          isSigningUp.current = false;
           toast.success("Account created! Please check your email to verify, then sign in.");
           setIsLogin(true);
           setFormData({ name: "", email: "", password: "", role: "student", accessCode: "" });
         }
       }
     } catch (error: any) {
+      isSigningUp.current = false;
       toast.error(error.message || "Authentication failed");
     } finally {
       setIsLoading(false);

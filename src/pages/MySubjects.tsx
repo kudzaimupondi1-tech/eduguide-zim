@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
-  GraduationCap, Plus, Trash2, BookOpen, ArrowLeft, Loader2, AlertCircle
+  GraduationCap, Plus, BookOpen, ArrowLeft, Loader2, AlertCircle, CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -25,13 +24,16 @@ const MySubjects = () => {
   const [saving, setSaving] = useState(false);
   const [studentLevel, setStudentLevel] = useState<"O-Level" | "A-Level" | null>(null);
   const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
-  const [studentSubjects, setStudentSubjects] = useState<StudentSubject[]>([]);
+  const [existingSubjects, setExistingSubjects] = useState<StudentSubject[]>([]);
   
-  // Separate form state for O-Level and A-Level sections
+  // Form state for adding subjects
   const [oLevelSubjectId, setOLevelSubjectId] = useState("");
   const [oLevelGrade, setOLevelGrade] = useState("");
   const [aLevelSubjectId, setALevelSubjectId] = useState("");
   const [aLevelGrade, setALevelGrade] = useState("");
+
+  // Subjects added in this session (for display feedback)
+  const [sessionAdded, setSessionAdded] = useState<StudentSubject[]>([]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -52,13 +54,7 @@ const MySubjects = () => {
         supabase.from("student_subjects").select("*, subjects(*)").eq("user_id", userId),
       ]);
       setAvailableSubjects(subjectsRes.data || []);
-      const existing = studentSubjectsRes.data || [];
-      setStudentSubjects(existing);
-
-      if (existing.length > 0) {
-        const hasALevel = existing.some(s => s.level === "A-Level");
-        setStudentLevel(hasALevel ? "A-Level" : "O-Level");
-      }
+      setExistingSubjects(studentSubjectsRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load subjects");
@@ -71,23 +67,32 @@ const MySubjects = () => {
     const subjectId = level === "O-Level" ? oLevelSubjectId : aLevelSubjectId;
     const grade = level === "O-Level" ? oLevelGrade : aLevelGrade;
     
-    if (!subjectId || !user) return;
-    if (studentSubjects.some(s => s.subject_id === subjectId && s.level === level)) {
+    if (!subjectId || !grade || !user) {
+      toast.error("Please select both a subject and a grade");
+      return;
+    }
+
+    // Check if already added (existing or session)
+    const allAdded = [...existingSubjects, ...sessionAdded];
+    if (allAdded.some(s => s.subject_id === subjectId && s.level === level)) {
       toast.error("Subject already added at this level");
       return;
     }
+
     setSaving(true);
     try {
       const { data, error } = await supabase
         .from("student_subjects")
-        .insert({ user_id: user.id, subject_id: subjectId, level, grade: grade || null })
+        .insert({ user_id: user.id, subject_id: subjectId, level, grade })
         .select("*, subjects(*)")
         .single();
       if (error) throw error;
-      setStudentSubjects([...studentSubjects, data]);
+      
+      // Add to session list and clear form
+      setSessionAdded(prev => [...prev, data]);
       if (level === "O-Level") { setOLevelSubjectId(""); setOLevelGrade(""); }
       else { setALevelSubjectId(""); setALevelGrade(""); }
-      toast.success("Subject added");
+      toast.success("Subject saved successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to add subject");
     } finally {
@@ -95,88 +100,37 @@ const MySubjects = () => {
     }
   };
 
-  const handleRemoveSubject = async (id: string) => {
-    try {
-      const { error } = await supabase.from("student_subjects").delete().eq("id", id);
-      if (error) throw error;
-      setStudentSubjects(studentSubjects.filter(s => s.id !== id));
-      toast.success("Subject removed");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to remove subject");
-    }
-  };
-
-  const handleUpdateGrade = async (id: string, grade: string) => {
-    try {
-      const { error } = await supabase.from("student_subjects").update({ grade }).eq("id", id);
-      if (error) throw error;
-      setStudentSubjects(studentSubjects.map(s => s.id === id ? { ...s, grade } : s));
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update grade");
-    }
-  };
-
-  // Filter subjects by level - only show subjects matching the section level
-  const oLevelAvailableSubjects = availableSubjects.filter(s => s.level === "O-Level");
-  const aLevelAvailableSubjects = availableSubjects.filter(s => s.level === "A-Level");
-  const oLevelSubjects = studentSubjects.filter(s => s.level === "O-Level");
-  const aLevelSubjects = studentSubjects.filter(s => s.level === "A-Level");
-
-  const renderSubjectList = (subjects: StudentSubject[], level: string) => (
-    subjects.length === 0 ? (
-      <div className="text-center py-10 text-muted-foreground">
-        <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
-        <p className="font-medium">No {level} subjects added yet</p>
-        <p className="text-sm mt-1">Use the form above to add your subjects</p>
-      </div>
-    ) : (
-      <div className="space-y-2">
-        {subjects.map((studentSubject) => (
-          <div key={studentSubject.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center text-xs font-bold text-muted-foreground">
-                {studentSubject.grade || "–"}
-              </div>
-              <div>
-                <h4 className="font-medium text-sm text-foreground">{studentSubject.subjects?.name || "Unknown"}</h4>
-                {studentSubject.subjects?.code && <p className="text-xs text-muted-foreground">{studentSubject.subjects.code}</p>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Select value={studentSubject.grade || ""} onValueChange={(grade) => handleUpdateGrade(studentSubject.id, grade)}>
-                <SelectTrigger className="w-[72px] h-8 text-xs"><SelectValue placeholder="Grade" /></SelectTrigger>
-                <SelectContent>
-                  {grades.map((grade) => (<SelectItem key={grade} value={grade}>{grade}</SelectItem>))}
-                </SelectContent>
-              </Select>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleRemoveSubject(studentSubject.id)}>
-                <Trash2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  );
+  // Filter out already-added subjects from dropdowns
+  const allAddedSubjectIds = [...existingSubjects, ...sessionAdded].map(s => `${s.subject_id}-${s.level}`);
+  const oLevelAvailable = availableSubjects
+    .filter(s => s.level === "O-Level")
+    .filter(s => !allAddedSubjectIds.includes(`${s.id}-O-Level`));
+  const aLevelAvailable = availableSubjects
+    .filter(s => s.level === "A-Level")
+    .filter(s => !allAddedSubjectIds.includes(`${s.id}-A-Level`));
 
   const renderAddSubjectForm = (level: "O-Level" | "A-Level") => {
     const subjectId = level === "O-Level" ? oLevelSubjectId : aLevelSubjectId;
     const grade = level === "O-Level" ? oLevelGrade : aLevelGrade;
     const setSubjectId = level === "O-Level" ? setOLevelSubjectId : setALevelSubjectId;
     const setGrade = level === "O-Level" ? setOLevelGrade : setALevelGrade;
-    const subjectsList = level === "O-Level" ? oLevelAvailableSubjects : aLevelAvailableSubjects;
+    const subjectsList = level === "O-Level" ? oLevelAvailable : aLevelAvailable;
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Select value={subjectId} onValueChange={setSubjectId}>
           <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={`Select ${level} Subject`} /></SelectTrigger>
           <SelectContent>
-            {subjectsList.map((subject) => (
-              <SelectItem key={subject.id} value={subject.id}>
-                {subject.name}
-                {subject.category && <span className="text-muted-foreground"> ({subject.category})</span>}
-              </SelectItem>
-            ))}
+            {subjectsList.length === 0 ? (
+              <div className="p-2 text-xs text-muted-foreground text-center">No more subjects available</div>
+            ) : (
+              subjectsList.map((subject) => (
+                <SelectItem key={subject.id} value={subject.id}>
+                  {subject.name}
+                  {subject.category && <span className="text-muted-foreground"> ({subject.category})</span>}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
 
@@ -187,10 +141,33 @@ const MySubjects = () => {
           </SelectContent>
         </Select>
 
-        <Button onClick={() => handleAddSubject(level)} disabled={!subjectId || saving} size="sm" className="h-9">
+        <Button onClick={() => handleAddSubject(level)} disabled={!subjectId || !grade || saving} size="sm" className="h-9">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
-          Add
+          Save
         </Button>
+      </div>
+    );
+  };
+
+  // Show subjects added in this session as feedback
+  const renderSessionSubjects = (level: string) => {
+    const added = sessionAdded.filter(s => s.level === level);
+    if (added.length === 0) return null;
+    return (
+      <div className="space-y-2 mt-3">
+        <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+          <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+          Added this session:
+        </p>
+        {added.map((s) => (
+          <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
+            <div className="w-7 h-7 rounded-md bg-card border border-border flex items-center justify-center text-xs font-bold">
+              {s.grade || "–"}
+            </div>
+            <span className="text-sm font-medium text-foreground">{s.subjects?.name || "Unknown"}</span>
+            <Badge variant="outline" className="text-[10px] ml-auto">{s.level}</Badge>
+          </div>
+        ))}
       </div>
     );
   };
@@ -271,7 +248,7 @@ const MySubjects = () => {
                 <h1 className="text-sm font-bold text-foreground">
                   {studentLevel === "A-Level" ? "Add O-Level & A-Level Subjects" : "Add O-Level Subjects"}
                 </h1>
-                <p className="text-[11px] text-muted-foreground">Manage your academic results</p>
+                <p className="text-[11px] text-muted-foreground">Add your academic results</p>
               </div>
             </div>
             <Link to="/dashboard" className="flex items-center gap-2">
@@ -285,7 +262,6 @@ const MySubjects = () => {
 
       <main className="container mx-auto px-4 py-6 max-w-2xl">
         {studentLevel === "A-Level" ? (
-          /* A-Level student: Two separate sections */
           <div className="space-y-6">
             <div className="p-3 rounded-xl bg-muted/60 border border-border flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
@@ -302,15 +278,15 @@ const MySubjects = () => {
                     <BookOpen className="w-4 h-4 text-primary" />
                     O-Level Subjects
                   </CardTitle>
-                  <Badge variant="outline" className="text-xs font-normal">{oLevelSubjects.length} added</Badge>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {existingSubjects.filter(s => s.level === "O-Level").length + sessionAdded.filter(s => s.level === "O-Level").length} total
+                  </Badge>
                 </div>
-                <CardDescription className="text-xs">Add your O-Level subjects and grades</CardDescription>
+                <CardDescription className="text-xs">Select an O-Level subject and grade, then press Save</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 {renderAddSubjectForm("O-Level")}
-                <div className="border-t border-border pt-3">
-                  {renderSubjectList(oLevelSubjects, "O-Level")}
-                </div>
+                {renderSessionSubjects("O-Level")}
               </CardContent>
             </Card>
 
@@ -322,20 +298,19 @@ const MySubjects = () => {
                     <GraduationCap className="w-4 h-4 text-primary" />
                     A-Level Subjects
                   </CardTitle>
-                  <Badge variant="outline" className="text-xs font-normal">{aLevelSubjects.length} added</Badge>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {existingSubjects.filter(s => s.level === "A-Level").length + sessionAdded.filter(s => s.level === "A-Level").length} total
+                  </Badge>
                 </div>
-                <CardDescription className="text-xs">Add your A-Level subjects and grades</CardDescription>
+                <CardDescription className="text-xs">Select an A-Level subject and grade, then press Save</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 {renderAddSubjectForm("A-Level")}
-                <div className="border-t border-border pt-3">
-                  {renderSubjectList(aLevelSubjects, "A-Level")}
-                </div>
+                {renderSessionSubjects("A-Level")}
               </CardContent>
             </Card>
           </div>
         ) : (
-          /* O-Level student: Single section */
           <Card className="border border-border shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -343,15 +318,15 @@ const MySubjects = () => {
                   <BookOpen className="w-4 h-4 text-primary" />
                   O-Level Subjects
                 </CardTitle>
-                <Badge variant="outline" className="text-xs font-normal">{oLevelSubjects.length} added</Badge>
+                <Badge variant="outline" className="text-xs font-normal">
+                  {existingSubjects.filter(s => s.level === "O-Level").length + sessionAdded.filter(s => s.level === "O-Level").length} total
+                </Badge>
               </div>
-              <CardDescription className="text-xs">Add your O-Level subjects and grades</CardDescription>
+              <CardDescription className="text-xs">Select an O-Level subject and grade, then press Save</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {renderAddSubjectForm("O-Level")}
-              <div className="border-t border-border pt-3">
-                {renderSubjectList(oLevelSubjects, "O-Level")}
-              </div>
+              {renderSessionSubjects("O-Level")}
             </CardContent>
           </Card>
         )}
@@ -361,10 +336,10 @@ const MySubjects = () => {
           <Button variant="outline" size="sm" asChild>
             <Link to="/dashboard"><ArrowLeft className="w-4 h-4 mr-1.5" /> Dashboard</Link>
           </Button>
-          <Button size="sm" asChild>
-            <Link to="/recommendations">
-              Get Recommendations
-              <GraduationCap className="w-4 h-4 ml-1.5" />
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/view-subjects">
+              View My Subjects
+              <BookOpen className="w-4 h-4 ml-1.5" />
             </Link>
           </Button>
         </div>

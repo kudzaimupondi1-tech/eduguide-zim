@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import MySubjects from "./pages/MySubjects";
+import ViewSubjects from "./pages/ViewSubjects";
 import Recommendations from "./pages/Recommendations";
 import ProfilePage from "./pages/ProfilePage";
 import UniversitiesPage from "./pages/UniversitiesPage";
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/my-subjects" element={<MySubjects />} />
+          <Route path="/view-subjects" element={<ViewSubjects />} />
           <Route path="/recommendations" element={<Recommendations />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/universities" element={<UniversitiesPage />} />
