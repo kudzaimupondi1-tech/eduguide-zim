@@ -226,6 +226,54 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          client_correlator: string
+          created_at: string
+          currency: string
+          ecocash_reference: string | null
+          id: string
+          phone_number: string
+          reference_code: string
+          status: string
+          transaction_data: Json | null
+          university_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          client_correlator: string
+          created_at?: string
+          currency?: string
+          ecocash_reference?: string | null
+          id?: string
+          phone_number: string
+          reference_code: string
+          status?: string
+          transaction_data?: Json | null
+          university_count: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          client_correlator?: string
+          created_at?: string
+          currency?: string
+          ecocash_reference?: string | null
+          id?: string
+          phone_number?: string
+          reference_code?: string
+          status?: string
+          transaction_data?: Json | null
+          university_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
