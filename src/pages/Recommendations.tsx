@@ -481,6 +481,23 @@ const Recommendations = () => {
     })
     .sort((a, b) => b.matchData.score - a.matchData.score);
 
+  // If university count filter is set (from payment), limit the number of unique universities shown
+  const getFilteredByPayment = () => {
+    if (universityCountFilter === 0 || universityCountFilter >= universities.length) return filteredPrograms;
+    // Get top N unique universities by program count
+    const uniScores = new Map<string, number>();
+    filteredPrograms.forEach(p => {
+      const current = uniScores.get(p.university_id) || 0;
+      uniScores.set(p.university_id, current + p.matchData.score);
+    });
+    const topUnis = Array.from(uniScores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, universityCountFilter)
+      .map(([id]) => id);
+    return filteredPrograms.filter(p => topUnis.includes(p.university_id));
+  };
+  const displayPrograms = getFilteredByPayment();
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
