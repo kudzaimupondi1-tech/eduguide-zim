@@ -773,7 +773,7 @@ const Recommendations = () => {
             {/* Results */}
             <div className="mb-4">
               <p className="text-muted-foreground">
-                Found <span className="font-semibold text-foreground">{filteredPrograms.length}</span> programs
+                Found <span className="font-semibold text-foreground">{displayPrograms.length}</span> programs
                 {activeTab === "recommendations" && " matching your grades"}
               </p>
             </div>
