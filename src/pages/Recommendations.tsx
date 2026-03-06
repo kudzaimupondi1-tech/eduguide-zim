@@ -779,7 +779,7 @@ const Recommendations = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredPrograms
+              {displayPrograms
                 .filter((p) => activeTab === "all" || p.matchData.score > 0)
                 .map((program) => (
                 <Card 
