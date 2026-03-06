@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -44,28 +43,31 @@ export const StudentRating = () => {
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-muted-foreground">Rate this system:</span>
-      <Button
-        variant={currentRating === "like" ? "default" : "outline"}
-        size="sm"
+    <div className="flex items-center gap-2">
+      <button
         onClick={() => handleRate("like")}
         disabled={loading}
-        className={currentRating === "like" ? "bg-accent text-accent-foreground" : ""}
+        className={`group flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+          currentRating === "like"
+            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 ring-2 ring-green-300 dark:ring-green-700"
+            : "bg-muted hover:bg-green-50 dark:hover:bg-green-950/20 text-muted-foreground hover:text-green-600 dark:hover:text-green-400"
+        }`}
       >
-        <ThumbsUp className="w-4 h-4 mr-1" />
-        Like
-      </Button>
-      <Button
-        variant={currentRating === "dislike" ? "default" : "outline"}
-        size="sm"
+        <ThumbsUp className={`w-4 h-4 transition-transform ${currentRating === "like" ? "scale-110" : "group-hover:scale-110"}`} />
+        <span>Like</span>
+      </button>
+      <button
         onClick={() => handleRate("dislike")}
         disabled={loading}
-        className={currentRating === "dislike" ? "bg-destructive text-destructive-foreground" : ""}
+        className={`group flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+          currentRating === "dislike"
+            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 ring-2 ring-red-300 dark:ring-red-700"
+            : "bg-muted hover:bg-red-50 dark:hover:bg-red-950/20 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
+        }`}
       >
-        <ThumbsDown className="w-4 h-4 mr-1" />
-        Dislike
-      </Button>
+        <ThumbsDown className={`w-4 h-4 transition-transform ${currentRating === "dislike" ? "scale-110" : "group-hover:scale-110"}`} />
+        <span>Dislike</span>
+      </button>
     </div>
   );
 };

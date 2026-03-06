@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { 
   GraduationCap, 
   Target, 
@@ -85,6 +85,8 @@ const Recommendations = () => {
   const [universities, setUniversities] = useState<Tables<"universities">[]>([]);
   const [activeTab, setActiveTab] = useState<string>("recommendations");
   const [selectedProgramDetail, setSelectedProgramDetail] = useState<(Program & { matchData: ReturnType<typeof calculateMatchScore> }) | null>(null);
+  const [searchParams] = useSearchParams();
+  const universityCountFilter = parseInt(searchParams.get("universities") || "0");
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -479,6 +481,23 @@ const Recommendations = () => {
     })
     .sort((a, b) => b.matchData.score - a.matchData.score);
 
+  // If university count filter is set (from payment), limit the number of unique universities shown
+  const getFilteredByPayment = () => {
+    if (universityCountFilter === 0 || universityCountFilter >= universities.length) return filteredPrograms;
+    // Get top N unique universities by program count
+    const uniScores = new Map<string, number>();
+    filteredPrograms.forEach(p => {
+      const current = uniScores.get(p.university_id) || 0;
+      uniScores.set(p.university_id, current + p.matchData.score);
+    });
+    const topUnis = Array.from(uniScores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, universityCountFilter)
+      .map(([id]) => id);
+    return filteredPrograms.filter(p => topUnis.includes(p.university_id));
+  };
+  const displayPrograms = getFilteredByPayment();
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -754,13 +773,13 @@ const Recommendations = () => {
             {/* Results */}
             <div className="mb-4">
               <p className="text-muted-foreground">
-                Found <span className="font-semibold text-foreground">{filteredPrograms.length}</span> programs
+                Found <span className="font-semibold text-foreground">{displayPrograms.length}</span> programs
                 {activeTab === "recommendations" && " matching your grades"}
               </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredPrograms
+              {displayPrograms
                 .filter((p) => activeTab === "all" || p.matchData.score > 0)
                 .map((program) => (
                 <Card 
@@ -868,7 +887,7 @@ const Recommendations = () => {
               ))}
             </div>
 
-            {filteredPrograms.filter((p) => activeTab === "all" || p.matchData.score > 0).length === 0 && (
+            {displayPrograms.filter((p) => activeTab === "all" || p.matchData.score > 0).length === 0 && (
               <Card className="py-12">
                 <CardContent className="text-center">
                   <Target className="w-16 h-16 mx-auto mb-4 text-muted-foreground/50" />

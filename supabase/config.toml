@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.validate-admin-code]
 verify_jwt = false
+
+[functions.ecocash-charge]
+verify_jwt = false
+
+[functions.ecocash-notify]
+verify_jwt = false
