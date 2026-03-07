@@ -1236,7 +1236,8 @@ export default function AdminPrograms() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
