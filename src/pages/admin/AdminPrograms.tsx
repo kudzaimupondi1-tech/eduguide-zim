@@ -1204,8 +1204,10 @@ export default function AdminPrograms() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPrograms.map((program) => (
-                    <TableRow key={program.id}>
+                  {filteredPrograms.map((program) => {
+                    const hasConditions = ((program as any).structured_requirements || []).length > 0 || program.entry_requirements;
+                    return (
+                    <TableRow key={program.id} className={!hasConditions ? "opacity-40" : ""}>
                       <TableCell className="font-medium max-w-[200px]">{program.name}</TableCell>
                       <TableCell>{program.universities?.name || "-"}</TableCell>
                       <TableCell>{program.faculty || "-"}</TableCell>
