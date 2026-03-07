@@ -28,6 +28,9 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminCombinations from "./pages/admin/AdminCombinations";
 import AdminGrading from "./pages/admin/AdminGrading";
+import AdminPayments from "./pages/admin/AdminPayments";
+import AdminReports from "./pages/admin/AdminReports";
+import AdminLogs from "./pages/admin/AdminLogs";
 import { StudentChatbot } from "./components/StudentChatbot";
 
 const queryClient = new QueryClient();
