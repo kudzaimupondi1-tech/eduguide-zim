@@ -196,6 +196,44 @@ export type Database = {
           },
         ]
       }
+      favourite_programs: {
+        Row: {
+          created_at: string
+          id: string
+          match_percentage: number | null
+          program_id: string
+          program_name: string | null
+          university_name: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_percentage?: number | null
+          program_id: string
+          program_name?: string | null
+          university_name?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_percentage?: number | null
+          program_id?: string
+          program_name?: string | null
+          university_name?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favourite_programs_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grading_structures: {
         Row: {
           created_at: string
@@ -236,7 +274,12 @@ export type Database = {
           id: string
           phone_number: string
           reference_code: string
+          refund_notes: string | null
+          refund_status: string | null
+          refunded_at: string | null
+          refunded_by: string | null
           status: string
+          student_level: string | null
           transaction_data: Json | null
           university_count: number
           updated_at: string
@@ -251,7 +294,12 @@ export type Database = {
           id?: string
           phone_number: string
           reference_code: string
+          refund_notes?: string | null
+          refund_status?: string | null
+          refunded_at?: string | null
+          refunded_by?: string | null
           status?: string
+          student_level?: string | null
           transaction_data?: Json | null
           university_count: number
           updated_at?: string
@@ -266,7 +314,12 @@ export type Database = {
           id?: string
           phone_number?: string
           reference_code?: string
+          refund_notes?: string | null
+          refund_status?: string | null
+          refunded_at?: string | null
+          refunded_by?: string | null
           status?: string
+          student_level?: string | null
           transaction_data?: Json | null
           university_count?: number
           updated_at?: string
