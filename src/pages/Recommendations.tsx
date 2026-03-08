@@ -385,7 +385,7 @@ const Recommendations = () => {
           <>
             <div className="relative max-w-md mb-6">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input placeholder="Search programs or universities..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+              <Input placeholder="Search programs or universities..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-10" />
             </div>
 
             <p className="text-muted-foreground mb-4">Found <span className="font-semibold text-foreground">{displayPrograms.length}</span> programs matching your grades</p>
