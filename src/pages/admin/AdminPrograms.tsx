@@ -147,11 +147,13 @@ export default function AdminPrograms() {
       qualification_type: string;
       min_passes: number;
       min_grade: string;
+      min_classification?: string;
       compulsory_subjects?: string[];
       subject_groups?: Array<{
         subjects: string[];
         min_required: number;
       }>;
+      required_diplomas?: string[];
     }>,
   });
 
@@ -540,6 +542,13 @@ export default function AdminPrograms() {
     if (formData.structured_requirements.length === 0) return formData.entry_requirements || "No requirements set";
     const joiner = formData.condition_logic === "AND" ? " AND " : " OR ";
     return formData.structured_requirements.map((r) => {
+      if (r.qualification_type === "Diploma") {
+        const reqDiplomas = (r as any).required_diplomas || [];
+        const diplomaNames = reqDiplomas.map((id: string) => diplomas.find(d => d.id === id)?.name || id).join(", ");
+        let text = `Diploma (min: ${r.min_classification || "Pass"})`;
+        if (diplomaNames) text += `: ${diplomaNames}`;
+        return text;
+      }
       let text = `${r.min_passes} ${r.qualification_type} passes`;
       if (r.min_grade) text += ` (min grade: ${r.min_grade})`;
 
@@ -1135,7 +1144,13 @@ export default function AdminPrograms() {
                         <div className="grid gap-3 md:grid-cols-3">
                           <div className="space-y-1">
                             <Label className="text-xs">Qualification Type</Label>
-                            <Select value={req.qualification_type} onValueChange={(v) => updateRequirementCondition(idx, "qualification_type", v)}>
+                            <Select value={req.qualification_type} onValueChange={(v) => {
+                              updateRequirementCondition(idx, "qualification_type", v);
+                              if (v === "Diploma") {
+                                updateRequirementCondition(idx, "min_grade", "");
+                                if (!req.min_classification) updateRequirementCondition(idx, "min_classification", "Pass");
+                              }
+                            }}>
                               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="O-Level">O-Level</SelectItem>
@@ -1145,71 +1160,145 @@ export default function AdminPrograms() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Min Passes Required</Label>
-                            <Input type="number" min={1} max={15} value={req.min_passes}
-                              onChange={(e) => updateRequirementCondition(idx, "min_passes", parseInt(e.target.value) || 1)}
-                              className="h-8 text-xs" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Minimum Grade</Label>
-                            <Select value={req.min_grade} onValueChange={(v) => updateRequirementCondition(idx, "min_grade", v)}>
-                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {GRADES.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs font-semibold">Compulsory Subjects (must ALL be present)</Label>
-                            <Button type="button" size="sm" variant="outline" onClick={() => openReqSubjectsDialog(idx, null)} className="h-7 text-xs">
-                              Edit
-                            </Button>
-                          </div>
-                          {((req as any).compulsory_subjects || []).length === 0 ? (
-                            <p className="text-xs text-muted-foreground italic">No compulsory subjects set.</p>
+                          {req.qualification_type !== "Diploma" && (
+                            <div className="space-y-1">
+                              <Label className="text-xs">Min Passes Required</Label>
+                              <Input type="number" min={1} max={15} value={req.min_passes}
+                                onChange={(e) => updateRequirementCondition(idx, "min_passes", parseInt(e.target.value) || 1)}
+                                className="h-8 text-xs" />
+                            </div>
+                          )}
+                          {req.qualification_type === "Diploma" ? (
+                            <div className="space-y-1">
+                              <Label className="text-xs">Minimum Classification</Label>
+                              <Select value={req.min_classification || "Pass"} onValueChange={(v) => updateRequirementCondition(idx, "min_classification", v)}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Distinction">Distinction</SelectItem>
+                                  <SelectItem value="Merit">Merit</SelectItem>
+                                  <SelectItem value="Credit">Credit</SelectItem>
+                                  <SelectItem value="Pass">Pass</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {((req as any).compulsory_subjects || []).map((sub: string) => (
-                                <Badge key={sub} variant="default" className="text-xs">{sub}</Badge>
-                              ))}
+                            <div className="space-y-1">
+                              <Label className="text-xs">Minimum Grade</Label>
+                              <Select value={req.min_grade} onValueChange={(v) => updateRequirementCondition(idx, "min_grade", v)}>
+                                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {GRADES.map((g) => (<SelectItem key={g} value={g}>{g}</SelectItem>))}
+                                </SelectContent>
+                              </Select>
                             </div>
                           )}
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs font-semibold">Subject Groups (OR Logic)</Label>
-                            <Button type="button" size="sm" variant="outline" onClick={() => addSubjectGroup(idx)} className="h-7 text-xs">
-                              <Plus className="w-3 h-3 mr-1" /> Add Group
-                            </Button>
+
+                        {req.qualification_type === "Diploma" ? (
+                          /* Diploma-specific: select from admin diploma list */
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold">Required Diplomas</Label>
+                            <p className="text-xs text-muted-foreground">Select diplomas from the admin diploma module that qualify for this program.</p>
+                            {((req as any).required_diplomas || []).length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {((req as any).required_diplomas || []).map((diplomaId: string) => {
+                                  const dip = diplomas.find(d => d.id === diplomaId);
+                                  return (
+                                    <Badge key={diplomaId} variant="default" className="text-xs flex items-center gap-1 pr-1">
+                                      {dip?.name || diplomaId}
+                                      <button type="button" onClick={() => {
+                                        const updated = [...formData.structured_requirements];
+                                        const reqDiplomas = ((updated[idx] as any).required_diplomas || []).filter((id: string) => id !== diplomaId);
+                                        (updated[idx] as any).required_diplomas = reqDiplomas;
+                                        setFormData({ ...formData, structured_requirements: updated });
+                                      }} className="ml-1 text-xs hover:text-destructive">×</button>
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <div className="grid gap-2 max-h-[200px] overflow-y-auto border rounded p-2">
+                              {diplomas.map((dip) => {
+                                const isSelected = ((req as any).required_diplomas || []).includes(dip.id);
+                                return (
+                                  <div key={dip.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-muted/50 ${isSelected ? 'bg-primary/5' : ''}`}>
+                                    <Checkbox checked={isSelected} onCheckedChange={() => {
+                                      const updated = [...formData.structured_requirements];
+                                      const current = (updated[idx] as any).required_diplomas || [];
+                                      if (isSelected) {
+                                        (updated[idx] as any).required_diplomas = current.filter((id: string) => id !== dip.id);
+                                      } else {
+                                        (updated[idx] as any).required_diplomas = [...current, dip.id];
+                                      }
+                                      setFormData({ ...formData, structured_requirements: updated });
+                                    }} />
+                                    <div className="flex-1">
+                                      <span className="text-sm">{dip.name}</span>
+                                      {dip.field && <span className="text-xs text-muted-foreground ml-1">({dip.field})</span>}
+                                      {dip.institution && <span className="text-xs text-muted-foreground ml-1">- {dip.institution}</span>}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {diplomas.length === 0 && (
+                                <p className="text-xs text-muted-foreground italic p-2">No diplomas configured. Add them in the Diplomas module first.</p>
+                              )}
+                            </div>
                           </div>
-                          {((req as any).subject_groups || []).length === 0 ? (
-                            <p className="text-xs text-muted-foreground italic">No subject groups. Add one to set alternative subject requirements.</p>
-                          ) : (
+                        ) : (
+                          /* Non-diploma: show compulsory subjects and subject groups */
+                          <>
                             <div className="space-y-2">
-                              {((req as any).subject_groups || []).map((group: any, groupIdx: number) => (
-                                <div key={groupIdx} className="p-2 border rounded bg-muted/50 space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium">Group {groupIdx + 1}: At least {group.min_required} of {group.subjects?.length || 0} subjects</span>
-                                    <Button type="button" size="sm" variant="ghost" onClick={() => removeSubjectGroup(idx, groupIdx)} className="h-6 text-destructive">
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {(group.subjects || []).map((sub: string) => (
-                                      <Badge key={sub} variant="outline" className="text-xs">{sub}</Badge>
-                                    ))}
-                                  </div>
-                                  <Button type="button" size="sm" variant="outline" onClick={() => openReqSubjectsDialog(idx, groupIdx)} className="h-7 text-xs w-full">
-                                    Edit Group
-                                  </Button>
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs font-semibold">Compulsory Subjects (must ALL be present)</Label>
+                                <Button type="button" size="sm" variant="outline" onClick={() => openReqSubjectsDialog(idx, null)} className="h-7 text-xs">
+                                  Edit
+                                </Button>
+                              </div>
+                              {((req as any).compulsory_subjects || []).length === 0 ? (
+                                <p className="text-xs text-muted-foreground italic">No compulsory subjects set.</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-1">
+                                  {((req as any).compulsory_subjects || []).map((sub: string) => (
+                                    <Badge key={sub} variant="default" className="text-xs">{sub}</Badge>
+                                  ))}
                                 </div>
-                              ))}
+                              )}
                             </div>
-                          )}
-                        </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-xs font-semibold">Subject Groups (OR Logic)</Label>
+                                <Button type="button" size="sm" variant="outline" onClick={() => addSubjectGroup(idx)} className="h-7 text-xs">
+                                  <Plus className="w-3 h-3 mr-1" /> Add Group
+                                </Button>
+                              </div>
+                              {((req as any).subject_groups || []).length === 0 ? (
+                                <p className="text-xs text-muted-foreground italic">No subject groups. Add one to set alternative subject requirements.</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {((req as any).subject_groups || []).map((group: any, groupIdx: number) => (
+                                    <div key={groupIdx} className="p-2 border rounded bg-muted/50 space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs font-medium">Group {groupIdx + 1}: At least {group.min_required} of {group.subjects?.length || 0} subjects</span>
+                                        <Button type="button" size="sm" variant="ghost" onClick={() => removeSubjectGroup(idx, groupIdx)} className="h-6 text-destructive">
+                                          <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {(group.subjects || []).map((sub: string) => (
+                                          <Badge key={sub} variant="outline" className="text-xs">{sub}</Badge>
+                                        ))}
+                                      </div>
+                                      <Button type="button" size="sm" variant="outline" onClick={() => openReqSubjectsDialog(idx, groupIdx)} className="h-7 text-xs w-full">
+                                        Edit Group
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
