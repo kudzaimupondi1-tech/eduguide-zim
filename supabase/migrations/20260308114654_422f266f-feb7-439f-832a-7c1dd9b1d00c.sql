@@ -1,0 +1,1 @@
+ALTER TABLE public.system_ratings ADD CONSTRAINT system_ratings_user_id_key UNIQUE (user_id);
