@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
-import VideoSection from "@/components/VideoSection";
+import TutorialGuide from "@/components/TutorialGuide";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -10,7 +10,7 @@ const Index = () => {
       <Navbar />
       <HeroSection />
       <AboutSection />
-      <VideoSection />
+      <TutorialGuide />
       <Footer />
     </div>
   );
