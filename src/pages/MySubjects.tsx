@@ -509,7 +509,21 @@ const MySubjects = () => {
             studentLevel === "O-Level" ? "Step 1 of 3 — Enter your results" : "Step 1 of 4 — Enter your results",
             () => setStep("level")
           )}
-          <main className="container mx-auto px-4 py-6 max-w-2xl space-y-6">
+          <main className="container mx-auto px-4 py-6 max-w-3xl space-y-6">
+            <Card className="border-border shadow-sm">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Add your results quickly</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Search a subject, pick grade, then click Add.</p>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">{sessionSubjects.length}</span> subject{sessionSubjects.length !== 1 ? "s" : ""} added
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {studentLevel === "A-Level" && (
               <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/15 flex items-start gap-2.5">
                 <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
@@ -522,10 +536,8 @@ const MySubjects = () => {
               </div>
             )}
 
-            {/* O-Level form (always shown) */}
             {renderSubjectForm("O-Level")}
 
-            {/* A-Level form (A-Level students only) */}
             {studentLevel === "A-Level" && (
               <>
                 <div className="h-px bg-border" />
@@ -533,9 +545,8 @@ const MySubjects = () => {
               </>
             )}
 
-            {/* Summary bar & continue */}
             <div className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border -mx-4 px-4 py-3 mt-6">
-              <div className="flex items-center justify-between max-w-2xl mx-auto">
+              <div className="flex items-center justify-between max-w-3xl mx-auto">
                 <div className="text-sm text-muted-foreground">
                   <span className="font-semibold text-foreground">{sessionSubjects.length}</span> subject{sessionSubjects.length !== 1 ? "s" : ""} added
                   {studentLevel === "A-Level" && (

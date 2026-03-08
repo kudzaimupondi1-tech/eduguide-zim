@@ -11,51 +11,65 @@ export const StudentRating = () => {
     fetchRating();
   }, []);
 
+  const normalizeRating = (value?: string | null): "up" | "down" | null => {
+    if (!value) return null;
+    if (["thumbs-up", "like", "up"].includes(value)) return "up";
+    if (["thumbs-down", "dislike", "down"].includes(value)) return "down";
+    return null;
+  };
+
   const fetchRating = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
+
+    const { data, error } = await supabase
       .from("system_ratings")
       .select("rating_type")
       .eq("user_id", user.id)
       .maybeSingle();
-    if (data?.rating_type === "thumbs-up") setCurrentRating("up");
-    else if (data?.rating_type === "thumbs-down") setCurrentRating("down");
+
+    if (error) {
+      console.error("Fetch rating error:", error);
+      return;
+    }
+
+    setCurrentRating(normalizeRating(data?.rating_type));
   };
 
   const handleRate = async (type: "up" | "down") => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Please sign in to rate"); return; }
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      const ratingType = type === "up" ? "thumbs-up" : "thumbs-down";
-
-      // Check if rating exists
-      const { data: existing } = await supabase
-        .from("system_ratings")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      let error;
-      if (existing) {
-        ({ error } = await supabase
-          .from("system_ratings")
-          .update({ rating_type: ratingType, star_rating: type === "up" ? 10 : 1 })
-          .eq("user_id", user.id));
-      } else {
-        ({ error } = await supabase
-          .from("system_ratings")
-          .insert({ user_id: user.id, rating_type: ratingType, star_rating: type === "up" ? 10 : 1 }));
+      if (!user) {
+        toast.error("Please sign in to rate");
+        return;
       }
 
+      const ratingType = type === "up" ? "like" : "dislike";
+
+      const { error } = await supabase
+        .from("system_ratings")
+        .upsert(
+          {
+            user_id: user.id,
+            rating_type: ratingType,
+            star_rating: type === "up" ? 10 : 1,
+          },
+          { onConflict: "user_id" }
+        );
+
       if (error) throw error;
+
       setCurrentRating(type);
       toast.success(type === "up" ? "Thanks for the positive feedback! 🎉" : "Thanks for your feedback. We'll work to improve!");
     } catch (error: any) {
       console.error("Rating error:", error);
-      toast.error("Failed to submit rating");
+      toast.error(error?.message ? `Failed to submit rating: ${error.message}` : "Failed to submit rating");
     } finally {
       setLoading(false);
     }
@@ -68,7 +82,7 @@ export const StudentRating = () => {
         disabled={loading}
         className={`p-2 rounded-xl transition-all ${
           currentRating === "up"
-            ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 scale-110"
+            ? "bg-primary/15 text-primary scale-110"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         } disabled:opacity-50`}
       >
@@ -79,7 +93,7 @@ export const StudentRating = () => {
         disabled={loading}
         className={`p-2 rounded-xl transition-all ${
           currentRating === "down"
-            ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 scale-110"
+            ? "bg-destructive/15 text-destructive scale-110"
             : "text-muted-foreground hover:bg-muted hover:text-foreground"
         } disabled:opacity-50`}
       >
