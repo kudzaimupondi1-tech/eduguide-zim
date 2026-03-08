@@ -196,6 +196,42 @@ export type Database = {
           },
         ]
       }
+      diplomas: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_years: number | null
+          field: string | null
+          id: string
+          institution: string | null
+          is_active: boolean
+          level: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_years?: number | null
+          field?: string | null
+          id?: string
+          institution?: string | null
+          is_active?: boolean
+          level?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_years?: number | null
+          field?: string | null
+          id?: string
+          institution?: string | null
+          is_active?: boolean
+          level?: string
+          name?: string
+        }
+        Relationships: []
+      }
       favourite_programs: {
         Row: {
           created_at: string
@@ -392,6 +428,45 @@ export type Database = {
           },
           {
             foreignKeyName: "program_careers_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_diplomas: {
+        Row: {
+          diploma_id: string
+          id: string
+          is_required: boolean
+          minimum_classification: string | null
+          program_id: string
+        }
+        Insert: {
+          diploma_id: string
+          id?: string
+          is_required?: boolean
+          minimum_classification?: string | null
+          program_id: string
+        }
+        Update: {
+          diploma_id?: string
+          id?: string
+          is_required?: boolean
+          minimum_classification?: string | null
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_diplomas_diploma_id_fkey"
+            columns: ["diploma_id"]
+            isOneToOne: false
+            referencedRelation: "diplomas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_diplomas_program_id_fkey"
             columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "programs"
