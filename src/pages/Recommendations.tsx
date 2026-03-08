@@ -186,13 +186,13 @@ const Recommendations = () => {
 
       const qualifies = conditionLogic === "AND" ? blocksPassed === totalBlocks : blocksPassed > 0;
 
-      // Rule 2: 100% if all met, Rule 3: 50% if compulsory met but optional missed
+      // Rule: 100% if ALL conditions met, 50% if compulsory subjects met but some optional/blocks missed
       let score;
       if (blocksPassed === totalBlocks) score = 100;
       else if (allCompulsoryMet && blocksPassed > 0) score = 50;
-      else score = Math.round((blocksPassed / totalBlocks) * 100);
+      else score = 0; // Does not qualify
 
-      return { score, matched: blocksPassed, total: totalBlocks, details, qualifies, hasConditions: true };
+      return { score, matched: blocksPassed, total: totalBlocks, details, qualifies: score > 0, hasConditions: true };
     }
 
     // Legacy logic
@@ -218,7 +218,7 @@ const Recommendations = () => {
     let score;
     if (requiredFailed === 0 && optionalSubjects.length > 0 && optionalMatched < optionalSubjects.length) score = 50;
     else if (requiredFailed === 0) score = 100;
-    else score = totalItems > 0 ? Math.round((matchedItems / totalItems) * 100) : 0;
+    else score = 0; // Does not qualify
 
     return { score, matched: requiredMatched + optionalMatched, total: requiredSubjects.length + optionalSubjects.length, details, qualifies, hasConditions: true };
   };
@@ -276,7 +276,8 @@ const Recommendations = () => {
   const filteredPrograms = programs
     .map(p => ({ ...p, matchData: calculateMatchScore(p) }))
     .filter(p => {
-      if (!p.matchData.hasConditions) return false; // Still hide programs without any conditions
+      if (!p.matchData.hasConditions) return false; // Hide programs without any conditions
+      if (!p.matchData.qualifies) return false; // Only show programs where student qualifies (100% or 50%)
       return p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.universities?.name.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .sort((a, b) => b.matchData.score - a.matchData.score);
