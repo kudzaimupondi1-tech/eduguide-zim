@@ -335,85 +335,82 @@ const MySubjects = () => {
     const icon = level === "O-Level" ? <BookOpen className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />;
 
     return (
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              {icon}
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-foreground">{level} Subjects</h3>
-              <p className="text-[11px] text-muted-foreground">{added.length} subject{added.length !== 1 ? "s" : ""} added</p>
-            </div>
-          </div>
-          <Badge variant="secondary" className="text-[10px]">{filteredSubjects.length} available</Badge>
+      <div className="space-y-3">
+        {/* Section label */}
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">{icon}</div>
+          <h3 className="text-sm font-semibold text-foreground">{level} Subjects</h3>
+          {added.length > 0 && (
+            <Badge variant="secondary" className="text-[10px] ml-auto">{added.length} added</Badge>
+          )}
         </div>
 
-        <Input
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          placeholder={`Search ${level} subjects...`}
-          className="h-10"
-        />
+        {/* Compact input row */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder={`Search ${level}...`}
+              className="h-10 pl-9 text-sm"
+            />
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 gap-2">
+        <div className="flex gap-2">
           <Select value={subjectId} onValueChange={setSubjectId}>
-            <SelectTrigger className="h-10 text-sm bg-background">
-              <SelectValue placeholder="Choose a subject..." />
+            <SelectTrigger className="h-10 text-sm bg-background flex-[2]">
+              <SelectValue placeholder="Select subject" />
             </SelectTrigger>
             <SelectContent>
               {filteredSubjects.length === 0 ? (
-                <div className="p-3 text-xs text-muted-foreground text-center">No subjects match your search</div>
+                <div className="p-3 text-xs text-muted-foreground text-center">No subjects found</div>
               ) : filteredSubjects.map((subject) => (
                 <SelectItem key={subject.id} value={subject.id}>
-                  <span>{subject.name}</span>
-                  {subject.category && <span className="text-muted-foreground ml-1">· {subject.category}</span>}
+                  {subject.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          <div className="flex gap-2">
-            <Select value={grade} onValueChange={setGrade}>
-              <SelectTrigger className="h-10 text-sm bg-background flex-1">
-                <SelectValue placeholder="Grade" />
-              </SelectTrigger>
-              <SelectContent>
-                {grades.map((g) => (
-                  <SelectItem key={g} value={g}>{g}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Select value={grade} onValueChange={setGrade}>
+            <SelectTrigger className="h-10 text-sm bg-background w-20">
+              <SelectValue placeholder="Grade" />
+            </SelectTrigger>
+            <SelectContent>
+              {grades.map((g) => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <Button
-              onClick={() => handleAddSubject(level)}
-              disabled={!subjectId || !grade || saving}
-              size="sm"
-              className="h-10 px-5 shrink-0"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" /> Add</>}
-            </Button>
-          </div>
+          <Button
+            onClick={() => handleAddSubject(level)}
+            disabled={!subjectId || !grade || saving}
+            size="icon"
+            className="h-10 w-10 shrink-0"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          </Button>
         </div>
 
+        {/* Added subjects list */}
         {added.length > 0 && (
-          <div className="rounded-xl border border-border overflow-hidden bg-card">
-            {added.map((s, idx) => (
+          <div className="space-y-1.5">
+            {added.map((s) => (
               <div
                 key={s.id}
-                className={`flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40 ${idx < added.length - 1 ? "border-b border-border" : ""}`}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-muted/40 group"
               >
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                <span className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                   {s.grade || "–"}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{s.subjects?.name || "Unknown"}</p>
-                  <p className="text-[11px] text-muted-foreground">{s.subjects?.category || level}</p>
-                </div>
+                </span>
+                <span className="text-sm text-foreground flex-1 truncate">{s.subjects?.name || "Unknown"}</span>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                   onClick={() => handleRemoveSubject(s)}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
