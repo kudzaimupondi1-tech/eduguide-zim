@@ -649,28 +649,23 @@ const MySubjects = () => {
                               <SelectTrigger className="h-10 text-sm bg-background flex-[2]">
                                 <SelectValue placeholder={`Select ${selectedQualificationType}`} />
                               </SelectTrigger>
-                              <SelectContent>
-                                {availableDiplomas
-                                  .filter(d => d.level === selectedQualificationType)
-                                  .filter(d =>
-                                    d.name.toLowerCase().includes(diplomaSearch.toLowerCase()) ||
-                                    (d.field || "").toLowerCase().includes(diplomaSearch.toLowerCase())
-                                  )
-                                  .filter(d => !studentDiplomas.some(sd => sd.diploma_id === d.id))
-                                  .length === 0 ? (
-                                  <div className="p-3 text-xs text-muted-foreground text-center">No {selectedQualificationType}s found</div>
-                                ) : (
-                                  availableDiplomas
+                              <SelectContent className="max-h-[280px]">
+                                {(() => {
+                                  const filtered = availableDiplomas
                                     .filter(d => d.level === selectedQualificationType)
                                     .filter(d =>
                                       d.name.toLowerCase().includes(diplomaSearch.toLowerCase()) ||
                                       (d.field || "").toLowerCase().includes(diplomaSearch.toLowerCase())
                                     )
-                                    .filter(d => !studentDiplomas.some(sd => sd.diploma_id === d.id))
-                                    .map(d => (
+                                    .filter(d => !studentDiplomas.some(sd => sd.diploma_id === d.id));
+                                  return filtered.length === 0 ? (
+                                    <div className="p-3 text-xs text-muted-foreground text-center">No {selectedQualificationType}s found</div>
+                                  ) : (
+                                    filtered.map(d => (
                                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                                     ))
-                                )}
+                                  );
+                                })()}
                               </SelectContent>
                             </Select>
                             <Select value={selectedClassification} onValueChange={setSelectedClassification}>
