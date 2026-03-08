@@ -448,7 +448,7 @@ const Recommendations = () => {
                         <CardDescription className="flex items-center gap-1 mt-1"><GraduationCap className="w-4 h-4" />{program.universities?.name}</CardDescription>
                       </div>
                       <div className="flex flex-col items-center gap-1">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold ${program.matchData.score === 100 ? "bg-green-100 text-green-700" : program.matchData.score >= 50 ? "bg-yellow-100 text-yellow-700" : "bg-muted text-muted-foreground"}`}>{program.matchData.score}%</div>
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold ${program.matchData.score === 100 ? "bg-green-100 text-green-700" : program.matchData.score >= 50 ? "bg-yellow-100 text-yellow-700" : program.matchData.score > 0 ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"}`}>{program.matchData.score}%</div>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleStar(program, program.matchData.score)}>
                           <Star className={`w-4 h-4 ${starredIds.has(program.id) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`} />
                         </Button>
