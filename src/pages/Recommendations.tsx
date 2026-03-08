@@ -547,6 +547,25 @@ const Recommendations = () => {
                   </div>
                 )}
                 {selectedProgramDetail.entry_requirements && <div><h4 className="text-sm font-semibold mb-1">Entry Requirements</h4><p className="text-sm text-muted-foreground">{selectedProgramDetail.entry_requirements}</p></div>}
+                {selectedProgramDetail.program_diplomas && selectedProgramDetail.program_diplomas.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1"><GraduationCap className="w-4 h-4" /> Accepted Diplomas</h4>
+                    <div className="space-y-2">
+                      {selectedProgramDetail.program_diplomas.map((pd: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground">{pd.diplomas?.name}</p>
+                            {pd.diplomas?.institution && <p className="text-xs text-muted-foreground">{pd.diplomas.institution}</p>}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {pd.minimum_classification && <Badge variant="outline" className="text-xs">Min: {pd.minimum_classification}</Badge>}
+                            <Badge variant={pd.is_required ? "default" : "secondary"} className="text-xs">{pd.is_required ? "Required" : "Optional"}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {selectedProgramDetail.program_careers && selectedProgramDetail.program_careers.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold mb-2 flex items-center gap-1"><Briefcase className="w-4 h-4" /> Career Paths</h4>
