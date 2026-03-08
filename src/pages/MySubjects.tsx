@@ -340,6 +340,7 @@ const MySubjects = () => {
   // STEP: Level Selection
   if (step === "level") {
     return (
+      <PageTransition>
       <div className="min-h-screen bg-secondary/30">
         <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
           <div className="container mx-auto px-4">
