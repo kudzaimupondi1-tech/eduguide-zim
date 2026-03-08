@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, CreditCard, RefreshCw, Loader2, DollarSign, Users, Eye, EyeOff, FileSearch, ArrowDownUp, CheckCircle2, XCircle, AlertCircle, Clock } from "lucide-react";
+import { Search, CreditCard, RefreshCw, Loader2, DollarSign, Users, Eye, EyeOff, FileSearch, ArrowDownUp, CheckCircle2, XCircle, AlertCircle, Clock, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 
@@ -49,6 +50,7 @@ export default function AdminPayments() {
   const [refundLoading, setRefundLoading] = useState(false);
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryResult, setQueryResult] = useState<any>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("payments");
 
   const [queryClientCorrelator, setQueryClientCorrelator] = useState("");
@@ -133,6 +135,20 @@ export default function AdminPayments() {
       toast({ title: "Error", description: error.message || "Query failed", variant: "destructive" });
     } finally {
       setQueryLoading(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    setDeleteLoading(paymentId);
+    try {
+      const { error } = await supabase.from("payments").delete().eq("id", paymentId);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Payment record deleted successfully" });
+      fetchPayments();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to delete payment", variant: "destructive" });
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -387,6 +403,32 @@ export default function AdminPayments() {
                                     <TooltipContent>Query EcoCash</TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
+                                <AlertDialog>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" disabled={deleteLoading === p.id}>
+                                            {deleteLoading === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Delete Payment</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Payment Record</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this payment by <strong>{p.profiles?.full_name || "Unknown"}</strong> for <strong>${p.amount.toFixed(2)}</strong>? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeletePayment(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </TableCell>
                           </TableRow>
