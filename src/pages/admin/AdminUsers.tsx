@@ -38,6 +38,7 @@ interface Profile {
   email: string | null;
   phone: string | null;
   created_at: string;
+  recommendation_viewed_at: string | null;
 }
 
 interface UserRole {
