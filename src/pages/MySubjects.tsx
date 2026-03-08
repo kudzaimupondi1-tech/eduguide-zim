@@ -540,17 +540,46 @@ const MySubjects = () => {
           <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-40">
             <div className="container mx-auto px-4 max-w-xl">
               <div className="flex items-center justify-between h-14">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">{sessionSubjects.length}</span> subject{sessionSubjects.length !== 1 ? "s" : ""}
-                  {studentLevel === "A-Level" && (
-                    <span className="text-muted-foreground ml-1">
-                      ({oLevelAdded.length}O · {aLevelAdded.length}A)
-                    </span>
+                <div className="flex-1 min-w-0">
+                  {studentLevel === "A-Level" && (oLevelAdded.length === 0 || aLevelAdded.length === 0) ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {oLevelAdded.length === 0 && aLevelAdded.length === 0
+                        ? "Add O-Level & A-Level subjects"
+                        : oLevelAdded.length === 0
+                        ? "Add at least 1 O-Level subject"
+                        : "Add at least 1 A-Level subject"}
+                    </p>
+                  ) : sessionSubjects.length === 0 ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      Add at least 1 subject
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">{sessionSubjects.length}</span> subject{sessionSubjects.length !== 1 ? "s" : ""}
+                      {studentLevel === "A-Level" && (
+                        <span className="ml-1">({oLevelAdded.length}O · {aLevelAdded.length}A)</span>
+                      )}
+                    </p>
                   )}
-                </p>
+                </div>
                 <Button
-                  onClick={() => setStep("confirm")}
-                  disabled={sessionSubjects.length === 0 || (studentLevel === "A-Level" && (oLevelAdded.length === 0 || aLevelAdded.length === 0))}
+                  onClick={() => {
+                    if (sessionSubjects.length === 0) {
+                      toast.error("Please add at least one subject first");
+                      return;
+                    }
+                    if (studentLevel === "A-Level" && oLevelAdded.length === 0) {
+                      toast.error("Please add at least one O-Level subject");
+                      return;
+                    }
+                    if (studentLevel === "A-Level" && aLevelAdded.length === 0) {
+                      toast.error("Please add at least one A-Level subject");
+                      return;
+                    }
+                    setStep("confirm");
+                  }}
                   className="h-9 px-5 rounded-xl text-sm font-semibold"
                 >
                   Continue <ChevronRight className="w-4 h-4 ml-1" />
