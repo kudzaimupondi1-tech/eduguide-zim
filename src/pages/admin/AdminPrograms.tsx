@@ -30,7 +30,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Pencil, Trash2, Loader2, BookOpen, Upload, Download, FileSpreadsheet, FileText, Search, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, BookOpen, Upload, Download, FileSpreadsheet, FileText, Search, AlertCircle, XCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useExcelImportExport, ExcelColumn } from "@/hooks/useExcelImportExport";
