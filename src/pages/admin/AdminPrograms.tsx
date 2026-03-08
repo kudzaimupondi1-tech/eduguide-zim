@@ -473,6 +473,69 @@ export default function AdminPrograms() {
     setMinRequiredFromGroup(1);
   };
 
+  // Diploma management functions
+  const openDiplomaDialog = async (program: Program) => {
+    setSelectedProgram(program);
+    setDiplomaSearchQuery("");
+    try {
+      const { data, error } = await supabase
+        .from("program_diplomas")
+        .select("diploma_id, is_required, minimum_classification")
+        .eq("program_id", program.id);
+      if (error) throw error;
+      setSelectedProgramDiplomas(data || []);
+    } catch (error) {
+      console.error("Error fetching program diplomas:", error);
+      setSelectedProgramDiplomas([]);
+    }
+    setIsDiplomaDialogOpen(true);
+  };
+
+  const toggleDiploma = (diplomaId: string) => {
+    const exists = selectedProgramDiplomas.find(pd => pd.diploma_id === diplomaId);
+    if (exists) {
+      setSelectedProgramDiplomas(prev => prev.filter(pd => pd.diploma_id !== diplomaId));
+    } else {
+      setSelectedProgramDiplomas(prev => [...prev, { diploma_id: diplomaId, is_required: true, minimum_classification: "Pass" }]);
+    }
+  };
+
+  const updateDiplomaRequirement = (diplomaId: string, field: string, value: any) => {
+    setSelectedProgramDiplomas(prev => prev.map(pd => pd.diploma_id === diplomaId ? { ...pd, [field]: value } : pd));
+  };
+
+  const saveDiplomas = async () => {
+    if (!selectedProgram) return;
+    setIsSubmitting(true);
+    try {
+      await supabase.from("program_diplomas").delete().eq("program_id", selectedProgram.id);
+      if (selectedProgramDiplomas.length > 0) {
+        const { error } = await supabase.from("program_diplomas").insert(
+          selectedProgramDiplomas.map(pd => ({
+            program_id: selectedProgram.id,
+            diploma_id: pd.diploma_id,
+            is_required: pd.is_required,
+            minimum_classification: pd.minimum_classification,
+          }))
+        );
+        if (error) throw error;
+      }
+      toast({ title: "Success", description: "Diploma requirements updated" });
+      setIsDiplomaDialogOpen(false);
+    } catch (error) {
+      console.error("Error saving diplomas:", error);
+      toast({ title: "Error", description: "Failed to save diploma requirements", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredDiplomas = diplomas.filter(d =>
+    d.name.toLowerCase().includes(diplomaSearchQuery.toLowerCase()) ||
+    (d.field || "").toLowerCase().includes(diplomaSearchQuery.toLowerCase()) ||
+    (d.institution || "").toLowerCase().includes(diplomaSearchQuery.toLowerCase())
+  );
+
   const getRequirementSummary = (): string => {
     if (formData.structured_requirements.length === 0) return formData.entry_requirements || "No requirements set";
     const joiner = formData.condition_logic === "AND" ? " AND " : " OR ";
