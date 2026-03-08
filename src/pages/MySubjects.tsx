@@ -19,6 +19,8 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Subject = Tables<"subjects">;
 type StudentSubject = Tables<"student_subjects"> & { subjects?: Subject };
+type DiplomaType = { id: string; name: string; institution: string | null; field: string | null; level: string; };
+type StudentDiploma = { id: string; diploma_id: string; classification: string | null; diplomas?: DiplomaType; };
 
 const grades = ["A", "B", "C", "D", "E", "O", "F"];
 
