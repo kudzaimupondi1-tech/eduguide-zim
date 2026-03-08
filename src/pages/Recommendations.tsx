@@ -483,6 +483,16 @@ const Recommendations = () => {
                   </div>
                 )}
                 {selectedProgramDetail.entry_requirements && <div><h4 className="text-sm font-semibold mb-1">Entry Requirements</h4><p className="text-sm text-muted-foreground">{selectedProgramDetail.entry_requirements}</p></div>}
+                {selectedProgramDetail.program_careers && selectedProgramDetail.program_careers.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1"><Briefcase className="w-4 h-4" /> Career Paths</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProgramDetail.program_careers.map((pc: any, i: number) => (
+                        <Badge key={i} variant="secondary">{pc.careers?.name}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1" onClick={() => toggleStar(selectedProgramDetail, selectedProgramDetail.matchData.score)}>
                     <Star className={`w-4 h-4 mr-2 ${starredIds.has(selectedProgramDetail.id) ? "text-yellow-500 fill-yellow-500" : ""}`} />
