@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("EcoCash notify error:", error);
-    return new Response(JSON.stringify({ error: error.message || "Notification processing failed" }), {
+    return new Response(JSON.stringify({ error: (error as Error).message || "Notification processing failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
