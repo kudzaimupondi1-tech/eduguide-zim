@@ -1,15 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  GraduationCap,
-  User,
-  LogOut,
-  Bell,
-  X,
-  Plus,
-  Star,
-  Download,
-  Building2
+  GraduationCap, User, LogOut, Bell, X, Plus, Star, Download, BookOpen, ChevronRight, Heart
 } from "lucide-react";
 import { StudentRating } from "@/components/StudentRating";
 import { Button } from "@/components/ui/button";
@@ -89,12 +81,6 @@ const Dashboard = () => {
     setNotifications(notifications.filter(n => n.id !== id));
   };
 
-  const removeFavourite = async (id: string) => {
-    await supabase.from("favourite_programs").delete().eq("id", id);
-    setFavourites(prev => prev.filter(f => f.id !== id));
-    toast.success("Removed from favourites");
-  };
-
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -122,40 +108,47 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-secondary/30">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 bg-card border-b border-border">
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border shadow-sm">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
-            <Link to="/dashboard" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <GraduationCap className="w-4.5 h-4.5 text-primary-foreground" />
+          <div className="flex items-center justify-between h-16">
+            <Link to="/dashboard" className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+                <GraduationCap className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <span className="text-sm font-bold text-foreground leading-none">EduGuide</span>
-                <span className="text-[10px] text-muted-foreground block -mt-0.5">Zimbabwe</span>
+                <span className="text-base font-bold text-foreground leading-none">EduGuide</span>
+                <span className="text-[11px] text-muted-foreground block">Zimbabwe</span>
               </div>
             </Link>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <div className="relative">
-                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowNotifications(!showNotifications)}>
-                  <Bell className="w-[18px] h-[18px]" />
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setShowNotifications(!showNotifications)}>
+                  <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center font-medium">{unreadCount}</span>
+                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center font-bold">{unreadCount}</span>
                   )}
                 </Button>
                 {showNotifications && (
-                  <div className="absolute right-0 mt-1 w-80 bg-card border border-border rounded-xl shadow-lg z-50">
-                    <div className="p-3 border-b border-border"><h3 className="font-semibold text-sm text-foreground">Notifications</h3></div>
-                    <div className="max-h-64 overflow-y-auto">
+                  <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-2xl shadow-lg z-50 overflow-hidden">
+                    <div className="p-4 border-b border-border bg-muted/30">
+                      <h3 className="font-bold text-sm text-foreground">Notifications</h3>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="p-4 text-center text-muted-foreground text-sm">No new notifications</div>
+                        <div className="p-6 text-center text-muted-foreground text-sm">
+                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                          No new notifications
+                        </div>
                       ) : notifications.map((n) => (
-                        <div key={n.id} className="p-3 border-b border-border last:border-0 hover:bg-muted/50">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <p className="font-medium text-sm text-foreground">{n.title}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+                        <div key={n.id} className="p-4 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm text-foreground truncate">{n.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => markNotificationRead(n.id)}><X className="w-3.5 h-3.5" /></Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 rounded-lg" onClick={() => markNotificationRead(n.id)}>
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -163,80 +156,117 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
-              <Button variant="ghost" size="icon" className="h-9 w-9" asChild>
-                <Link to="/profile"><User className="w-[18px] h-[18px]" /></Link>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" asChild>
+                <Link to="/profile"><User className="w-5 h-5" /></Link>
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleSignOut}>
-                <LogOut className="w-[18px] h-[18px]" />
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-muted-foreground hover:text-destructive" onClick={handleSignOut}>
+                <LogOut className="w-5 h-5" />
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Hero Section */}
-        <section className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{getGreeting()}, {getUserName()} 👋</h1>
-          <p className="text-muted-foreground mt-1 text-sm">A clear path to your university journey.</p>
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-              <span>Profile completion</span>
-              <span className="font-medium text-foreground">{profileCompleteness}%</span>
+      <main className="container mx-auto px-4 py-8 max-w-3xl">
+        {/* Welcome */}
+        <section className="mb-10">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+            {getGreeting()}, {getUserName()} 👋
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm">Your personalised university guidance starts here.</p>
+          <div className="mt-5 p-4 rounded-2xl bg-card border border-border shadow-sm">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+              <span className="font-medium">Profile completion</span>
+              <span className="font-bold text-foreground">{profileCompleteness}%</span>
             </div>
-            <Progress value={profileCompleteness} className="h-2" />
+            <Progress value={profileCompleteness} className="h-2.5 rounded-full" />
+            {profileCompleteness < 100 && (
+              <p className="text-[11px] text-muted-foreground mt-2">
+                {subjectCount === 0 ? "Add your subjects to complete your profile" : "Complete your profile for better recommendations"}
+              </p>
+            )}
           </div>
         </section>
 
-        {/* 2 Action Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
-          {/* Card 1: Add Subjects */}
-          <Card className="border border-border shadow-sm hover:shadow-md transition-all group">
-            <CardContent className="pt-6 pb-5 px-5 flex flex-col h-full">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                <Plus className="w-6 h-6 text-primary" />
+        {/* Action Cards */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+          {/* Add Subjects */}
+          <Card className="group border border-border shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-7 pb-6 px-6 flex flex-col h-full">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                <BookOpen className="w-7 h-7 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg text-foreground mb-1.5">Add Subjects</h3>
-              <p className="text-sm text-muted-foreground flex-1 mb-4">
-                Add your O-Level or A-Level subjects to get personalised programme recommendations.
+              <h3 className="font-bold text-lg text-foreground mb-2">Add Subjects</h3>
+              <p className="text-sm text-muted-foreground flex-1 mb-5 leading-relaxed">
+                Enter your O-Level or A-Level results to unlock personalised programme recommendations.
               </p>
-              <Button size="sm" asChild className="w-full">
-                <Link to="/my-subjects">Get Started</Link>
+              <Button asChild className="w-full h-11 font-semibold rounded-xl group-hover:shadow-md transition-shadow">
+                <Link to="/my-subjects" className="flex items-center justify-center gap-2">
+                  Get Started <ChevronRight className="w-4 h-4" />
+                </Link>
               </Button>
             </CardContent>
           </Card>
 
-          {/* Card 2: Favoured Programs */}
-          <Card className="border border-border shadow-sm hover:shadow-md transition-all group">
-            <CardContent className="pt-6 pb-5 px-5 flex flex-col h-full">
-              <div className="w-12 h-12 rounded-2xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center mb-4 group-hover:bg-yellow-200 dark:group-hover:bg-yellow-900/50 transition-colors">
-                <Star className="w-6 h-6 text-yellow-500" />
+          {/* Favoured Programs */}
+          <Card className="group border border-border shadow-sm hover:shadow-lg hover:border-yellow-400/40 transition-all duration-300 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-7 pb-6 px-6 flex flex-col h-full">
+              <div className="w-14 h-14 rounded-2xl bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                <Heart className="w-7 h-7 text-yellow-500" />
               </div>
-              <h3 className="font-semibold text-lg text-foreground mb-1.5">Favoured Programs</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="font-bold text-lg text-foreground mb-2">Favoured Programs</h3>
+              <p className="text-sm text-muted-foreground flex-1 mb-5 leading-relaxed">
                 {favourites.length === 0
-                  ? "Star up to 5 programs from recommendations to save them here."
-                  : `You have ${favourites.length} starred program${favourites.length > 1 ? "s" : ""}.`
+                  ? "Star up to 5 programs from your recommendations to save them here."
+                  : `You have ${favourites.length} saved program${favourites.length > 1 ? "s" : ""}. View and download as PDF.`
                 }
               </p>
-              {favourites.length > 0 && (
-                <Button variant="outline" size="sm" className="w-full mb-2" asChild>
-                  <Link to="/favored-programs">
-                    <Star className="w-4 h-4 mr-1.5" /> View Favoured
+              {favourites.length > 0 ? (
+                <Button variant="outline" asChild className="w-full h-11 font-semibold rounded-xl border-yellow-300 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20">
+                  <Link to="/favored-programs" className="flex items-center justify-center gap-2">
+                    <Star className="w-4 h-4" /> View Favourites ({favourites.length})
                   </Link>
                 </Button>
+              ) : (
+                <div className="h-11 flex items-center justify-center rounded-xl bg-muted/50 border border-dashed border-border text-sm text-muted-foreground">
+                  No favourites yet
+                </div>
               )}
             </CardContent>
           </Card>
         </section>
 
-
+        {/* Quick Info */}
+        <section className="mb-10">
+          <h2 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
+            <GraduationCap className="w-4 h-4 text-primary" /> How It Works
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { step: "1", title: "Add Subjects", desc: "Enter your O or A-Level results with grades" },
+              { step: "2", title: "Pay & Unlock", desc: "Choose universities and make a small payment" },
+              { step: "3", title: "Get Matched", desc: "Receive personalised programme recommendations" },
+            ].map((item) => (
+              <div key={item.step} className="flex items-start gap-3 p-4 rounded-xl bg-card border border-border">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-primary">{item.step}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Rating */}
-        <Card className="border border-border shadow-sm">
-          <CardContent className="py-5 px-5 flex items-center justify-between">
+        <Card className="border border-border shadow-sm rounded-2xl">
+          <CardContent className="py-5 px-6 flex items-center justify-between gap-4">
             <div>
-              <h3 className="font-semibold text-foreground text-sm">How do you find EduGuide?</h3>
+              <h3 className="font-bold text-foreground text-sm">How do you find EduGuide?</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Your feedback helps us improve</p>
             </div>
             <StudentRating />

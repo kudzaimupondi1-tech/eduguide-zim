@@ -373,7 +373,7 @@ const MySubjects = () => {
                 </div>
                 <h2 className="text-lg font-bold text-foreground mb-1">A Level Student</h2>
                 <p className="text-sm text-muted-foreground">Enter O-Level & A-Level results → Get university programme recommendations</p>
-                <p className="text-xs text-primary font-semibold mt-2">From $0.50 per university</p>
+                <p className="text-xs text-primary font-semibold mt-2">From $0.50 for 1 university</p>
                 <Button className="mt-5 w-full" size="sm">Continue as A Level</Button>
               </CardContent>
             </Card>
