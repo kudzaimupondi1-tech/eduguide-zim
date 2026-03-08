@@ -466,7 +466,7 @@ const MySubjects = () => {
                   <p className="text-sm text-muted-foreground mb-3">
                     Enter your O-Level results and get A-Level combination recommendations
                   </p>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 font-semibold">$1.00 for recommendations</Badge>
+                  
                   <Button className="mt-5 w-full h-11 rounded-xl font-semibold" size="sm">
                     Continue as O Level <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
