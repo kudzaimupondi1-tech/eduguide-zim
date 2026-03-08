@@ -704,6 +704,27 @@ export default function AdminPrograms() {
             <p className="text-muted-foreground mt-1">Manage university programs and their subject requirements</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={programs.length === 0 || isSubmitting}>
+                  <XCircle className="w-4 h-4 mr-2" /> Delete All
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete All Programs?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete all {programs.length} programs, their subject requirements, and career links. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Yes, Delete All
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button variant="outline" size="sm" onClick={() => downloadTemplate(programColumns, "programs")}>
               <FileSpreadsheet className="w-4 h-4 mr-2" /> Template
             </Button>
