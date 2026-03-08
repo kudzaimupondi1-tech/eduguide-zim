@@ -438,7 +438,7 @@ const Recommendations = () => {
       </main>
 
       <Dialog open={!!selectedProgramDetail} onOpenChange={open => { if (!open) setSelectedProgramDetail(null); }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto mx-3 sm:mx-auto">
           {selectedProgramDetail && (
             <>
               <DialogHeader>

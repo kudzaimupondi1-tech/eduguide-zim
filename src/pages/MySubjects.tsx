@@ -854,7 +854,7 @@ const MySubjects = () => {
 
                 {/* Bottom action bar */}
                 <div className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border -mx-4 px-4 py-3">
-                  <div className="flex items-center justify-between max-w-2xl mx-auto">
+                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 max-w-2xl mx-auto">
                     <Button variant="outline" size="sm" onClick={() => setStep("confirm")} className="rounded-xl">
                       <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
                     </Button>
