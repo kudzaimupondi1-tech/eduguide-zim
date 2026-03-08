@@ -326,6 +326,7 @@ const Recommendations = () => {
     .map(p => ({ ...p, matchData: calculateMatchScore(p) }))
     .filter(p => {
       if (!p.matchData.hasConditions) return false; // Hide programs without any conditions
+      if (p.matchData.score === 0) return false; // Hide programs with zero match
       return p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.universities?.name.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .sort((a, b) => b.matchData.score - a.matchData.score);
