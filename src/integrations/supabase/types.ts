@@ -527,6 +527,36 @@ export type Database = {
         }
         Relationships: []
       }
+      student_queries: {
+        Row: {
+          admin_response: string | null
+          created_at: string
+          id: string
+          query_text: string
+          responded_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string
+          id?: string
+          query_text: string
+          responded_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string
+          id?: string
+          query_text?: string
+          responded_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       student_subjects: {
         Row: {
           created_at: string

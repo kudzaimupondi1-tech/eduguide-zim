@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   GraduationCap, User, LogOut, Bell, X, Plus, Star, Download, BookOpen, ChevronRight, Heart
 } from "lucide-react";
+import { StudentQueryForm } from "@/components/StudentQueryForm";
 import { PageTransition } from "@/components/PageTransition";
 import { StudentRating } from "@/components/StudentRating";
 import { Button } from "@/components/ui/button";
@@ -264,8 +265,11 @@ const Dashboard = () => {
           </div>
         </section>
 
+        {/* Student Query */}
+        {user && <StudentQueryForm userId={user.id} />}
+
         {/* Rating */}
-        <Card className="border border-border shadow-sm rounded-2xl">
+        <Card className="border border-border shadow-sm rounded-2xl mt-6">
           <CardContent className="py-5 px-6 flex items-center justify-between gap-4">
             <div>
               <h3 className="font-bold text-foreground text-sm">How do you find EduGuide?</h3>
