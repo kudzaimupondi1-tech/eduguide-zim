@@ -422,14 +422,28 @@ const MySubjects = () => {
             <SelectTrigger className="h-10 text-sm bg-background flex-[2]">
               <SelectValue placeholder="Select subject" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px]">
               {filteredSubjects.length === 0 ? (
                 <div className="p-3 text-xs text-muted-foreground text-center">No subjects found</div>
-              ) : filteredSubjects.map((subject) => (
-                <SelectItem key={subject.id} value={subject.id}>
-                  {subject.name}
-                </SelectItem>
-              ))}
+              ) : (
+                <>
+                  {["Sciences", "Arts", "Commercials"].map(cat => {
+                    const catSubjects = filteredSubjects.filter(s => s.category === cat);
+                    if (catSubjects.length === 0) return null;
+                    return (
+                      <div key={cat}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{cat}</div>
+                        {catSubjects.map(subject => (
+                          <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  {filteredSubjects.filter(s => !["Sciences", "Arts", "Commercials"].includes(s.category || "")).map(subject => (
+                    <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                  ))}
+                </>
+              )}
             </SelectContent>
           </Select>
 
