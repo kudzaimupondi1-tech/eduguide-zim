@@ -419,6 +419,19 @@ const Recommendations = () => {
                       {program.universities?.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{program.universities.location}</div>}
                       {program.duration_years && <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{program.duration_years} years</div>}
                     </div>
+                    {program.program_careers && program.program_careers.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Briefcase className="w-3.5 h-3.5" /> Career Paths:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {program.program_careers.slice(0, 4).map((pc, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">{pc.careers?.name}</Badge>
+                          ))}
+                          {program.program_careers.length > 4 && (
+                            <Badge variant="outline" className="text-xs">+{program.program_careers.length - 4} more</Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <Button size="sm" className="w-full" onClick={() => setSelectedProgramDetail(program)}>View Details <ChevronRight className="w-4 h-4 ml-2" /></Button>
                   </CardContent>
                 </Card>
