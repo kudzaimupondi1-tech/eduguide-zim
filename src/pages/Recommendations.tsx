@@ -218,7 +218,7 @@ const Recommendations = () => {
     let score;
     if (requiredFailed === 0 && optionalSubjects.length > 0 && optionalMatched < optionalSubjects.length) score = 50;
     else if (requiredFailed === 0) score = 100;
-    else score = totalItems > 0 ? Math.round((matchedItems / totalItems) * 100) : 0;
+    else score = 0; // Does not qualify
 
     return { score, matched: requiredMatched + optionalMatched, total: requiredSubjects.length + optionalSubjects.length, details, qualifies, hasConditions: true };
   };
