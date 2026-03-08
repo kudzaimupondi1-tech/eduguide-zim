@@ -548,8 +548,8 @@ const MySubjects = () => {
             )}
 
             <div className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border -mx-4 px-4 py-3 mt-6">
-              <div className="flex items-center justify-between max-w-3xl mx-auto">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 max-w-3xl mx-auto">
+                <div className="text-sm text-muted-foreground text-center sm:text-left">
                   <span className="font-semibold text-foreground">{sessionSubjects.length}</span> subject{sessionSubjects.length !== 1 ? "s" : ""} added
                   {studentLevel === "A-Level" && (
                     <span className="text-[11px] ml-2">
