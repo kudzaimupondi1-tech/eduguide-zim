@@ -625,11 +625,12 @@ const MySubjects = () => {
                           <SelectValue placeholder="Select qualification type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Diploma">Diploma</SelectItem>
-                          <SelectItem value="Higher National Diploma">Higher National Diploma</SelectItem>
-                          <SelectItem value="National Certificate">National Certificate</SelectItem>
-                          <SelectItem value="National Diploma">National Diploma</SelectItem>
                           <SelectItem value="Certificate">Certificate</SelectItem>
+                          <SelectItem value="National Certificate">National Certificate</SelectItem>
+                          <SelectItem value="Diploma">Diploma</SelectItem>
+                          <SelectItem value="National Diploma">National Diploma</SelectItem>
+                          <SelectItem value="Higher Diploma">Higher Diploma</SelectItem>
+                          <SelectItem value="Higher National Diploma">Higher National Diploma</SelectItem>
                         </SelectContent>
                       </Select>
 
