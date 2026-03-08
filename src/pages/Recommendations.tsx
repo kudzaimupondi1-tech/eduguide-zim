@@ -76,7 +76,7 @@ const Recommendations = () => {
 
       const [subjectsData, programsData, universitiesData, combinationsData, favouritesData] = await Promise.all([
         supabase.from("student_subjects").select("*, subjects(*)").eq("user_id", userId),
-        supabase.from("programs").select("*, universities(*), program_subjects(*, subjects(*)), program_careers(*, careers(*))").eq("is_active", true).order("name"),
+        supabase.from("programs").select("*, universities(*), program_subjects(*, subjects(*)), program_careers(*, careers(*)), program_diplomas(*, diplomas(*))").eq("is_active", true).order("name"),
         supabase.from("universities").select("*").eq("is_active", true).order("name"),
         supabase.from("subject_combinations").select("*").eq("is_active", true).eq("level", "A-Level"),
         supabase.from("favourite_programs").select("program_id").eq("user_id", userId),
