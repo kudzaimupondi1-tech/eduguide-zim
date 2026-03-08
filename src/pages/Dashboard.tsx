@@ -20,6 +20,8 @@ interface Notification {
   message: string;
   is_read: boolean;
   created_at: string;
+  type: "announcement" | "notification";
+  expires_at?: string | null;
 }
 
 interface FavouriteProgram {
@@ -40,7 +42,7 @@ const Dashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [favourites, setFavourites] = useState<FavouriteProgram[]>([]);
   const [showChat, setShowChat] = useState(false);
-  const [unrespondedQueries, setUnrespondedQueries] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -58,60 +60,50 @@ const Dashboard = () => {
     try {
       supabase.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("user_id", userId).then();
 
-      // Sync announcements to notifications
-      await syncAnnouncements(userId);
-
-      const [profileRes, subjectCountRes, notificationsRes, favouritesRes, queriesRes] = await Promise.all([
+      const [profileRes, subjectCountRes, announcementsRes, regularNotifsRes, favouritesRes, unreadMsgRes] = await Promise.all([
         supabase.from("profiles").select("full_name").eq("user_id", userId).single(),
         supabase.from("student_subjects").select("*", { count: "exact", head: true }).eq("user_id", userId),
-        supabase.from("student_notifications").select("*").eq("user_id", userId).eq("is_read", false).order("created_at", { ascending: false }).limit(20),
+        // Fetch all published announcements (they persist until expired)
+        supabase.from("announcements").select("id, title, content, published_at, expires_at").eq("is_published", true),
+        // Fetch regular (non-announcement) notifications that are unread
+        supabase.from("student_notifications").select("*").eq("user_id", userId).eq("is_read", false).neq("notification_type", "announcement").order("created_at", { ascending: false }).limit(20),
         supabase.from("favourite_programs").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-        supabase.from("student_queries").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("status", "responded"),
+        // Count only unread admin responses
+        supabase.from("student_queries").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("status", "responded").eq("is_read_by_student", false),
       ]);
       setProfile(profileRes.data);
       setSubjectCount(subjectCountRes.count || 0);
-      setNotifications(notificationsRes.data || []);
       setFavourites((favouritesRes.data as any[]) || []);
-      setUnrespondedQueries(queriesRes.count || 0);
+      setUnreadMessages(unreadMsgRes.count || 0);
+
+      // Combine announcements + regular notifications
+      const now = new Date();
+      const announcementNotifs: Notification[] = (announcementsRes.data || [])
+        .filter(a => !a.expires_at || new Date(a.expires_at) > now)
+        .map(a => ({
+          id: `ann-${a.id}`,
+          title: `📢 ${a.title}`,
+          message: a.content,
+          is_read: false, // Announcements always show
+          created_at: a.published_at || a.id,
+          type: "announcement" as const,
+          expires_at: a.expires_at,
+        }));
+
+      const regularNotifs: Notification[] = (regularNotifsRes.data || []).map(n => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        is_read: n.is_read || false,
+        created_at: n.created_at,
+        type: "notification" as const,
+      }));
+
+      setNotifications([...announcementNotifs, ...regularNotifs]);
     } catch (error) {
       console.error("Error fetching user data:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const syncAnnouncements = async (userId: string) => {
-    try {
-      const { data: announcements } = await supabase
-        .from("announcements")
-        .select("id, title, content, published_at")
-        .eq("is_published", true);
-
-      if (!announcements || announcements.length === 0) return;
-
-      const { data: existingNotifs } = await supabase
-        .from("student_notifications")
-        .select("title")
-        .eq("user_id", userId)
-        .eq("notification_type", "announcement");
-
-      const existingTitles = new Set((existingNotifs || []).map(n => n.title));
-
-      const newNotifs = announcements
-        .filter(a => !existingTitles.has(`📢 ${a.title}`))
-        .map(a => ({
-          user_id: userId,
-          title: `📢 ${a.title}`,
-          message: a.content,
-          notification_type: "announcement",
-          is_read: false,
-        }));
-
-      if (newNotifs.length > 0) {
-        await supabase.from("student_notifications").insert(newNotifs as any);
-      }
-    } catch (error) {
-      console.error("Error syncing announcements:", error);
     }
   };
 
@@ -121,9 +113,14 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  const markNotificationRead = async (id: string) => {
-    await supabase.from("student_notifications").update({ is_read: true }).eq("id", id);
-    setNotifications(notifications.filter(n => n.id !== id));
+  const markNotificationRead = async (notif: Notification) => {
+    if (notif.type === "announcement") {
+      // Just remove from local list visually
+      setNotifications(prev => prev.filter(n => n.id !== notif.id));
+    } else {
+      await supabase.from("student_notifications").update({ is_read: true }).eq("id", notif.id);
+      setNotifications(prev => prev.filter(n => n.id !== notif.id));
+    }
   };
 
   const getGreeting = () => {
@@ -139,8 +136,17 @@ const Dashboard = () => {
     return "Student";
   };
 
-  const handleChatRead = () => {
-    setUnrespondedQueries(0);
+  const handleChatRead = async () => {
+    setUnreadMessages(0);
+    // Mark all responded queries as read by student
+    if (user) {
+      await supabase
+        .from("student_queries")
+        .update({ is_read_by_student: true } as any)
+        .eq("user_id", user.id)
+        .eq("status", "responded")
+        .eq("is_read_by_student", false);
+    }
   };
 
   const profileCompleteness = Math.min(100, (subjectCount > 0 ? 50 : 0) + (profile?.full_name ? 50 : 25));
@@ -175,8 +181,8 @@ const Dashboard = () => {
               <div className="relative">
                 <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setShowChat(!showChat)}>
                   <MessageSquare className="w-5 h-5" />
-                  {unrespondedQueries > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-green-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{unrespondedQueries}</span>
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-green-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{unreadMessages}</span>
                   )}
                 </Button>
               </div>
@@ -205,8 +211,13 @@ const Dashboard = () => {
                             <div className="flex-1 min-w-0">
                               <p className="font-semibold text-sm text-foreground truncate">{n.title}</p>
                               <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                              {n.type === "announcement" && n.expires_at && (
+                                <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                  Expires: {new Date(n.expires_at).toLocaleDateString()}
+                                </p>
+                              )}
                             </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 rounded-lg" onClick={() => markNotificationRead(n.id)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 rounded-lg" onClick={() => markNotificationRead(n)}>
                               <X className="w-3.5 h-3.5" />
                             </Button>
                           </div>

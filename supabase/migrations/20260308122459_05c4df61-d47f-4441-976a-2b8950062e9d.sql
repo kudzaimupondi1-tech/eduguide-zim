@@ -1,0 +1,1 @@
+ALTER TABLE public.student_queries ADD COLUMN is_read_by_student boolean NOT NULL DEFAULT false;
