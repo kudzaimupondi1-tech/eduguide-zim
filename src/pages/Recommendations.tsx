@@ -154,6 +154,53 @@ const Recommendations = () => {
         const compulsorySubjects: string[] = block.compulsory_subjects || [];
         const subjectGroups: any[] = block.subject_groups || [];
 
+        // Handle diploma/certificate blocks by checking studentDiplomas
+        if (qLevel.toLowerCase().includes("diploma") || qLevel.toLowerCase().includes("certificate") || qLevel.toLowerCase().includes("mature")) {
+          let diplomaBlockPassed = true;
+          const CLASSIFICATION_ORDER = ["Distinction", "Merit", "Credit", "Pass"];
+          const meetsClassification = (studentClass: string | null, minClass: string | null): boolean => {
+            if (!minClass) return true;
+            if (!studentClass) return false;
+            return CLASSIFICATION_ORDER.indexOf(studentClass) <= CLASSIFICATION_ORDER.indexOf(minClass);
+          };
+
+          // Check if student has ANY diploma that matches this block's requirements
+          if (studentDiplomas.length === 0) {
+            diplomaBlockPassed = false;
+            details.push(`✗ ${qLevel}: No diploma/certificate submitted`);
+          } else {
+            // Check compulsory diploma subjects if specified
+            if (compulsorySubjects.length > 0) {
+              for (const reqName of compulsorySubjects) {
+                const match = studentDiplomas.find(sd => 
+                  (sd.diplomas?.name || "").toLowerCase().includes(reqName.toLowerCase()) ||
+                  reqName.toLowerCase().includes((sd.diplomas?.name || "").toLowerCase())
+                );
+                if (match && meetsClassification(match.classification, minGrade)) {
+                  details.push(`✓ Diploma ${reqName}: ${match.classification || 'Pass'}`);
+                } else {
+                  diplomaBlockPassed = false;
+                  details.push(`✗ Diploma ${reqName}: not met`);
+                }
+              }
+            } else {
+              // No specific diploma required, just check student has a diploma with min classification
+              const anyMatch = studentDiplomas.some(sd => meetsClassification(sd.classification, minGrade));
+              if (anyMatch) {
+                details.push(`✓ ${qLevel}: Diploma/certificate submitted`);
+              } else {
+                diplomaBlockPassed = false;
+                details.push(`✗ ${qLevel}: Classification not met`);
+              }
+            }
+          }
+
+          if (!diplomaBlockPassed) allCompulsoryMet = false;
+          if (diplomaBlockPassed) blocksPassed++;
+          continue;
+        }
+
+        // Standard subject-based block evaluation
         const validPasses = countValidPasses(qLevel, minGrade);
         let compulsorySatisfied = true;
 
@@ -277,7 +324,6 @@ const Recommendations = () => {
     .map(p => ({ ...p, matchData: calculateMatchScore(p) }))
     .filter(p => {
       if (!p.matchData.hasConditions) return false; // Hide programs without any conditions
-      if (!p.matchData.qualifies) return false; // Only show programs where student qualifies (100% or 50%)
       return p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.universities?.name.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .sort((a, b) => b.matchData.score - a.matchData.score);
