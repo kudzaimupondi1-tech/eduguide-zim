@@ -86,6 +86,7 @@ const MySubjects = () => {
   const [selectedDiplomaId, setSelectedDiplomaId] = useState("");
   const [selectedClassification, setSelectedClassification] = useState("Pass");
   const [diplomaSearch, setDiplomaSearch] = useState("");
+  const [selectedQualificationType, setSelectedQualificationType] = useState("");
 
   const [universities, setUniversities] = useState<{ id: string; name: string }[]>([]);
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>([]);
