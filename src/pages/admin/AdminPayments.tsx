@@ -138,6 +138,20 @@ export default function AdminPayments() {
     }
   };
 
+  const handleDeletePayment = async (paymentId: string) => {
+    setDeleteLoading(paymentId);
+    try {
+      const { error } = await supabase.from("payments").delete().eq("id", paymentId);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Payment record deleted successfully" });
+      fetchPayments();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to delete payment", variant: "destructive" });
+    } finally {
+      setDeleteLoading(null);
+    }
+  };
+
   const hasViewedRecommendations = (p: Payment) => {
     return !!p.profiles?.recommendation_viewed_at;
   };
