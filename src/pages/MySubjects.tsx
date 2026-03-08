@@ -77,6 +77,8 @@ const MySubjects = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [uniSearch, setUniSearch] = useState("");
+  const [oLevelSearch, setOLevelSearch] = useState("");
+  const [aLevelSearch, setALevelSearch] = useState("");
 
   const [universities, setUniversities] = useState<{ id: string; name: string }[]>([]);
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>([]);
