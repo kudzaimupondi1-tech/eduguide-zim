@@ -213,11 +213,12 @@ const Recommendations = () => {
     }
 
     const qualifies = requiredFailed === 0;
-    // Rule 2 & 3: 100% if all required + optional met, 50% if required met but optional missed
+    const totalItems = requiredSubjects.length + optionalSubjects.length;
+    const matchedItems = requiredMatched + optionalMatched;
     let score;
     if (requiredFailed === 0 && optionalSubjects.length > 0 && optionalMatched < optionalSubjects.length) score = 50;
     else if (requiredFailed === 0) score = 100;
-    else score = 0;
+    else score = totalItems > 0 ? Math.round((matchedItems / totalItems) * 100) : 0;
 
     return { score, matched: requiredMatched + optionalMatched, total: requiredSubjects.length + optionalSubjects.length, details, qualifies, hasConditions: true };
   };
@@ -275,8 +276,7 @@ const Recommendations = () => {
   const filteredPrograms = programs
     .map(p => ({ ...p, matchData: calculateMatchScore(p) }))
     .filter(p => {
-      if (!p.matchData.hasConditions) return false; // Rule 1: hide programs without conditions
-      if (!p.matchData.qualifies) return false;
+      if (!p.matchData.hasConditions) return false; // Still hide programs without any conditions
       return p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.universities?.name.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .sort((a, b) => b.matchData.score - a.matchData.score);
@@ -429,24 +429,26 @@ const Recommendations = () => {
               <Input placeholder="Search programs or universities..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-10" />
             </div>
 
-            <p className="text-muted-foreground mb-4">Found <span className="font-semibold text-foreground">{displayPrograms.length}</span> programs matching your grades</p>
+            <p className="text-muted-foreground mb-4">Found <span className="font-semibold text-foreground">{displayPrograms.length}</span> programs • <span className="text-green-600 font-medium">{displayPrograms.filter(p => p.matchData.score === 100).length} full matches</span></p>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {displayPrograms.map(program => (
-                <Card key={program.id} className={`group hover:shadow-lg transition-all ${program.matchData.score === 100 ? "border-green-300 bg-green-50/50 dark:bg-green-950/10" : program.matchData.score >= 50 ? "border-yellow-200" : ""}`}>
+                <Card key={program.id} className={`group hover:shadow-lg transition-all ${program.matchData.score === 100 ? "border-green-300 bg-green-50/50 dark:bg-green-950/10" : program.matchData.score >= 50 ? "border-yellow-200" : "opacity-75"}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           {program.matchData.score === 100 && <Badge className="bg-green-600 text-white"><Star className="w-3 h-3 mr-1" /> 100% Match</Badge>}
-                          {program.matchData.score === 50 && <Badge className="bg-yellow-500 text-white">50% Match</Badge>}
+                          {program.matchData.score >= 50 && program.matchData.score < 100 && <Badge className="bg-yellow-500 text-white">{program.matchData.score}% Match</Badge>}
+                          {program.matchData.score > 0 && program.matchData.score < 50 && <Badge variant="outline" className="text-orange-600 border-orange-300">{program.matchData.score}% Match</Badge>}
+                          {program.matchData.score === 0 && <Badge variant="outline" className="text-destructive border-destructive/30">0% Match</Badge>}
                           {program.degree_type && <Badge variant="outline">{program.degree_type}</Badge>}
                         </div>
                         <CardTitle className="text-lg">{program.name}</CardTitle>
                         <CardDescription className="flex items-center gap-1 mt-1"><GraduationCap className="w-4 h-4" />{program.universities?.name}</CardDescription>
                       </div>
                       <div className="flex flex-col items-center gap-1">
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold ${program.matchData.score === 100 ? "bg-green-100 text-green-700" : program.matchData.score >= 50 ? "bg-yellow-100 text-yellow-700" : "bg-muted text-muted-foreground"}`}>{program.matchData.score}%</div>
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold ${program.matchData.score === 100 ? "bg-green-100 text-green-700" : program.matchData.score >= 50 ? "bg-yellow-100 text-yellow-700" : program.matchData.score > 0 ? "bg-orange-100 text-orange-700" : "bg-muted text-muted-foreground"}`}>{program.matchData.score}%</div>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleStar(program, program.matchData.score)}>
                           <Star className={`w-4 h-4 ${starredIds.has(program.id) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`} />
                         </Button>
