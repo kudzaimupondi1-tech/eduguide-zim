@@ -69,6 +69,9 @@ const Recommendations = () => {
 
   const fetchData = async (userId: string) => {
     try {
+      // Track recommendation view
+      supabase.from("profiles").update({ recommendation_viewed_at: new Date().toISOString() } as any).eq("user_id", userId).then();
+
       const [subjectsData, programsData, universitiesData, combinationsData, favouritesData] = await Promise.all([
         supabase.from("student_subjects").select("*, subjects(*)").eq("user_id", userId),
         supabase.from("programs").select("*, universities(*), program_subjects(*, subjects(*))").eq("is_active", true).order("name"),
