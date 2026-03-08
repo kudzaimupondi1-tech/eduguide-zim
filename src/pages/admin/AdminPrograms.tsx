@@ -1198,8 +1198,8 @@ export default function AdminPrograms() {
                         {DIPLOMA_LIKE_TYPES.includes(req.qualification_type) ? (
                           /* Diploma-like: select from admin diploma list filtered by level */
                           <div className="space-y-2">
-                            <Label className="text-xs font-semibold">Required Diplomas</Label>
-                            <p className="text-xs text-muted-foreground">Select diplomas from the admin diploma module that qualify for this program.</p>
+                            <Label className="text-xs font-semibold">Required {req.qualification_type}s</Label>
+                            <p className="text-xs text-muted-foreground">Select {req.qualification_type.toLowerCase()}s from the admin diploma module that qualify for this program.</p>
                             {((req as any).required_diplomas || []).length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {((req as any).required_diplomas || []).map((diplomaId: string) => {
@@ -1218,33 +1218,38 @@ export default function AdminPrograms() {
                                 })}
                               </div>
                             )}
-                            <div className="grid gap-2 max-h-[200px] overflow-y-auto border rounded p-2">
-                              {diplomas.map((dip) => {
-                                const isSelected = ((req as any).required_diplomas || []).includes(dip.id);
-                                return (
-                                  <div key={dip.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-muted/50 ${isSelected ? 'bg-primary/5' : ''}`}>
-                                    <Checkbox checked={isSelected} onCheckedChange={() => {
-                                      const updated = [...formData.structured_requirements];
-                                      const current = (updated[idx] as any).required_diplomas || [];
-                                      if (isSelected) {
-                                        (updated[idx] as any).required_diplomas = current.filter((id: string) => id !== dip.id);
-                                      } else {
-                                        (updated[idx] as any).required_diplomas = [...current, dip.id];
-                                      }
-                                      setFormData({ ...formData, structured_requirements: updated });
-                                    }} />
-                                    <div className="flex-1">
-                                      <span className="text-sm">{dip.name}</span>
-                                      {dip.field && <span className="text-xs text-muted-foreground ml-1">({dip.field})</span>}
-                                      {dip.institution && <span className="text-xs text-muted-foreground ml-1">- {dip.institution}</span>}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                              {diplomas.length === 0 && (
-                                <p className="text-xs text-muted-foreground italic p-2">No diplomas configured. Add them in the Diplomas module first.</p>
-                              )}
-                            </div>
+                            {(() => {
+                              const filteredDiplomas = diplomas.filter(d => d.level === req.qualification_type);
+                              return (
+                                <div className="grid gap-2 max-h-[200px] overflow-y-auto border rounded p-2">
+                                  {filteredDiplomas.map((dip) => {
+                                    const isSelected = ((req as any).required_diplomas || []).includes(dip.id);
+                                    return (
+                                      <div key={dip.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-muted/50 ${isSelected ? 'bg-primary/5' : ''}`}>
+                                        <Checkbox checked={isSelected} onCheckedChange={() => {
+                                          const updated = [...formData.structured_requirements];
+                                          const current = (updated[idx] as any).required_diplomas || [];
+                                          if (isSelected) {
+                                            (updated[idx] as any).required_diplomas = current.filter((id: string) => id !== dip.id);
+                                          } else {
+                                            (updated[idx] as any).required_diplomas = [...current, dip.id];
+                                          }
+                                          setFormData({ ...formData, structured_requirements: updated });
+                                        }} />
+                                        <div className="flex-1">
+                                          <span className="text-sm">{dip.name}</span>
+                                          {dip.field && <span className="text-xs text-muted-foreground ml-1">({dip.field})</span>}
+                                          {dip.institution && <span className="text-xs text-muted-foreground ml-1">- {dip.institution}</span>}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                  {filteredDiplomas.length === 0 && (
+                                    <p className="text-xs text-muted-foreground italic p-2">No {req.qualification_type.toLowerCase()}s configured. Add them in the Diplomas module first with level "{req.qualification_type}".</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ) : (
                           /* Non-diploma: show compulsory subjects and subject groups */
