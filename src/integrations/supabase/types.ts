@@ -336,6 +336,7 @@ export type Database = {
           id: string
           last_active_at: string | null
           phone: string | null
+          recommendation_viewed_at: string | null
           updated_at: string
           user_id: string
         }
@@ -347,6 +348,7 @@ export type Database = {
           id?: string
           last_active_at?: string | null
           phone?: string | null
+          recommendation_viewed_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -358,6 +360,7 @@ export type Database = {
           id?: string
           last_active_at?: string | null
           phone?: string | null
+          recommendation_viewed_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -667,6 +670,7 @@ export type Database = {
           feedback: string | null
           id: string
           rating_type: string
+          star_rating: number | null
           user_id: string
         }
         Insert: {
@@ -674,6 +678,7 @@ export type Database = {
           feedback?: string | null
           id?: string
           rating_type: string
+          star_rating?: number | null
           user_id: string
         }
         Update: {
@@ -681,6 +686,7 @@ export type Database = {
           feedback?: string | null
           id?: string
           rating_type?: string
+          star_rating?: number | null
           user_id?: string
         }
         Relationships: []
