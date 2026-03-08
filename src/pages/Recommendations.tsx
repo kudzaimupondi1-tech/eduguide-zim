@@ -186,13 +186,13 @@ const Recommendations = () => {
 
       const qualifies = conditionLogic === "AND" ? blocksPassed === totalBlocks : blocksPassed > 0;
 
-      // Rule 2: 100% if all met, Rule 3: 50% if compulsory met but optional missed
+      // Rule: 100% if ALL conditions met, 50% if compulsory subjects met but some optional/blocks missed
       let score;
       if (blocksPassed === totalBlocks) score = 100;
       else if (allCompulsoryMet && blocksPassed > 0) score = 50;
-      else score = Math.round((blocksPassed / totalBlocks) * 100);
+      else score = 0; // Does not qualify
 
-      return { score, matched: blocksPassed, total: totalBlocks, details, qualifies, hasConditions: true };
+      return { score, matched: blocksPassed, total: totalBlocks, details, qualifies: score > 0, hasConditions: true };
     }
 
     // Legacy logic
