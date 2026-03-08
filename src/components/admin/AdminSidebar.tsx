@@ -14,6 +14,7 @@ import {
   BarChart3,
   Layers,
   Hash,
+  MessageSquare,
 } from "lucide-react";
 import {
   Sidebar,
