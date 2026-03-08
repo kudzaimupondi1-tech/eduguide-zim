@@ -33,6 +33,7 @@ import AdminPayments from "./pages/admin/AdminPayments";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminLogs from "./pages/admin/AdminLogs";
 import AdminQueries from "./pages/admin/AdminQueries";
+import AdminDiplomas from "./pages/admin/AdminDiplomas";
 
 const queryClient = new QueryClient();
 
