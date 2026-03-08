@@ -276,7 +276,8 @@ const Recommendations = () => {
   const filteredPrograms = programs
     .map(p => ({ ...p, matchData: calculateMatchScore(p) }))
     .filter(p => {
-      if (!p.matchData.hasConditions) return false; // Still hide programs without any conditions
+      if (!p.matchData.hasConditions) return false; // Hide programs without any conditions
+      if (!p.matchData.qualifies) return false; // Only show programs where student qualifies (100% or 50%)
       return p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.universities?.name.toLowerCase().includes(searchQuery.toLowerCase());
     })
     .sort((a, b) => b.matchData.score - a.matchData.score);
