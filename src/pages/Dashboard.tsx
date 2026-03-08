@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   GraduationCap, User, LogOut, Bell, X, Plus, Star, Download, BookOpen, ChevronRight, Heart
 } from "lucide-react";
+import { StudentQueryForm } from "@/components/StudentQueryForm";
 import { PageTransition } from "@/components/PageTransition";
 import { StudentRating } from "@/components/StudentRating";
 import { Button } from "@/components/ui/button";
