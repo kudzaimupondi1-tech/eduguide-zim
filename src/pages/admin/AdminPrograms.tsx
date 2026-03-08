@@ -1161,7 +1161,7 @@ export default function AdminPrograms() {
                               </SelectContent>
                             </Select>
                           </div>
-                          {req.qualification_type !== "Diploma" && (
+                          {!DIPLOMA_LIKE_TYPES.includes(req.qualification_type) && (
                             <div className="space-y-1">
                               <Label className="text-xs">Min Passes Required</Label>
                               <Input type="number" min={1} max={15} value={req.min_passes}
