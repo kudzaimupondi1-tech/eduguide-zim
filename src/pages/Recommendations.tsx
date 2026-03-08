@@ -179,13 +179,19 @@ const Recommendations = () => {
               }
             }
           } else {
+            // If no specific diploma is required, check if student has ANY diploma
             totalRequirements++;
-            const anyMatch = studentDiplomas.some(sd => meetsClassification(sd.classification, minGrade));
-            if (anyMatch) {
-              satisfiedRequirements++;
-              details.push(`✓ ${qLevel}: Diploma/certificate submitted`);
+            if (studentDiplomas.length === 0) {
+              // Student has no diplomas at all
+              details.push(`✗ ${qLevel}: No diploma/certificate submitted`);
             } else {
-              details.push(`✗ ${qLevel}: Classification not met`);
+              const anyMatch = studentDiplomas.some(sd => meetsClassification(sd.classification, minGrade));
+              if (anyMatch) {
+                satisfiedRequirements++;
+                details.push(`✓ ${qLevel}: Diploma/certificate submitted`);
+              } else {
+                details.push(`✗ ${qLevel}: Classification not met`);
+              }
             }
           }
           continue;
@@ -360,30 +366,20 @@ const Recommendations = () => {
     return CLASSIFICATION_ORDER.indexOf(studentClass) <= CLASSIFICATION_ORDER.indexOf(minClass);
   };
 
-  // Diploma programs: show if student has a matching diploma OR if they qualify by A-Level subjects
+  // Diploma programs: only show if student actually meets the diploma/certificate requirements
   const diplomaPrograms = programs
     .filter(p => p.entry_type && p.entry_type !== 'normal')
     .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.universities?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
     .map(p => {
       const matchData = calculateMatchScore(p);
-      // Check if student's diplomas match any of the program's accepted diplomas
-      const programDiplomas = p.program_diplomas || [];
-      let diplomaMatch = false;
-      let matchedDiplomaName = "";
-      for (const pd of programDiplomas) {
-        const studentHas = studentDiplomas.find(sd => sd.diploma_id === pd.diplomas?.id);
-        if (studentHas && meetsClassification(studentHas.classification, pd.minimum_classification)) {
-          diplomaMatch = true;
-          matchedDiplomaName = pd.diplomas?.name || "";
-          break;
-        }
-      }
-      // Qualify if diploma matches OR A-Level subjects match
-      const qualifies = diplomaMatch || matchData.qualifies;
-      const score = diplomaMatch ? 100 : matchData.score;
-      return { ...p, matchData: { ...matchData, qualifies, score, diplomaMatch, matchedDiplomaName } };
+      
+      // For diploma/certificate programs, the matchData.score should already reflect 
+      // whether diploma requirements were met (from the structured_requirements logic)
+      // We only show programs where the student actually qualifies
+      
+      return { ...p, matchData };
     })
-    .filter(p => p.matchData.score > 0)
+    .filter(p => p.matchData.score > 0 && p.matchData.qualifies)
     .sort((a, b) => b.matchData.score - a.matchData.score);
 
   if (loading) {
