@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.ecocash-notify]
 verify_jwt = false
+
+[functions.ecocash-refund]
+verify_jwt = false
+
+[functions.ecocash-query]
+verify_jwt = false
