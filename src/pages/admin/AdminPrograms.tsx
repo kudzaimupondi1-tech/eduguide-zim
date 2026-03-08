@@ -1195,8 +1195,8 @@ export default function AdminPrograms() {
                           )}
                         </div>
 
-                        {req.qualification_type === "Diploma" ? (
-                          /* Diploma-specific: select from admin diploma list */
+                        {DIPLOMA_LIKE_TYPES.includes(req.qualification_type) ? (
+                          /* Diploma-like: select from admin diploma list filtered by level */
                           <div className="space-y-2">
                             <Label className="text-xs font-semibold">Required Diplomas</Label>
                             <p className="text-xs text-muted-foreground">Select diplomas from the admin diploma module that qualify for this program.</p>
