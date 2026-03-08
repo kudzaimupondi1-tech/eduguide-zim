@@ -304,17 +304,17 @@ const Recommendations = () => {
     <PageTransition>
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild><Link to="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
-              <div>
-                <h1 className="font-bold text-lg text-foreground">Recommendations</h1>
-                <p className="text-sm text-muted-foreground">{isOLevelStudent ? "A-Level combinations" : "Programs matched to your grades"}</p>
+        <div className="container mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <Button variant="ghost" size="icon" className="shrink-0" asChild><Link to="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
+              <div className="min-w-0">
+                <h1 className="font-bold text-base sm:text-lg text-foreground truncate">Recommendations</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{isOLevelStudent ? "A-Level combinations" : "Programs matched to your grades"}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs"><Star className="w-3 h-3 mr-1" />{starCount}/{MAX_STARS} starred</Badge>
+            <div className="flex items-center gap-2 shrink-0">
+              <Badge variant="outline" className="text-[10px] sm:text-xs whitespace-nowrap"><Star className="w-3 h-3 mr-1" />{starCount}/{MAX_STARS}</Badge>
             </div>
           </div>
         </div>
