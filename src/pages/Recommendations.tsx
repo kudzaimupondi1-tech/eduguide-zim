@@ -295,7 +295,9 @@ const Recommendations = () => {
     const topUnis = Array.from(uniScores.entries()).sort((a, b) => b[1] - a[1]).slice(0, universityCountFilter).map(([id]) => id);
     return baseList.filter(p => topUnis.includes(p.university_id));
   };
-  const displayPrograms = getFilteredByPayment();
+  const allDisplayPrograms = getFilteredByPayment();
+  const displayPrograms = allDisplayPrograms.filter(p => p.entry_type === 'normal' || !p.entry_type);
+  const diplomaPrograms = allDisplayPrograms.filter(p => p.entry_type && p.entry_type !== 'normal');
 
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
