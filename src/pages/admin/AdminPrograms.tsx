@@ -1169,7 +1169,7 @@ export default function AdminPrograms() {
                                 className="h-8 text-xs" />
                             </div>
                           )}
-                          {req.qualification_type === "Diploma" ? (
+                          {DIPLOMA_LIKE_TYPES.includes(req.qualification_type) ? (
                             <div className="space-y-1">
                               <Label className="text-xs">Minimum Classification</Label>
                               <Select value={req.min_classification || "Pass"} onValueChange={(v) => updateRequirementCondition(idx, "min_classification", v)}>
