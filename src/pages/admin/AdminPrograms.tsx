@@ -86,6 +86,8 @@ interface ProgramSubject {
 }
 
 const GRADES = ["A", "B", "C", "D", "E", "O", "F"];
+const DIPLOMA_LIKE_TYPES = ["Diploma", "Higher National Diploma", "National Certificate", "National Diploma", "Certificate"];
+const ALL_QUALIFICATION_TYPES = ["O-Level", "A-Level", ...DIPLOMA_LIKE_TYPES];
 
 const programColumns: ExcelColumn[] = [
   { key: "name", header: "Program Name", required: true },
@@ -542,10 +544,10 @@ export default function AdminPrograms() {
     if (formData.structured_requirements.length === 0) return formData.entry_requirements || "No requirements set";
     const joiner = formData.condition_logic === "AND" ? " AND " : " OR ";
     return formData.structured_requirements.map((r) => {
-      if (r.qualification_type === "Diploma") {
+      if (DIPLOMA_LIKE_TYPES.includes(r.qualification_type)) {
         const reqDiplomas = (r as any).required_diplomas || [];
         const diplomaNames = reqDiplomas.map((id: string) => diplomas.find(d => d.id === id)?.name || id).join(", ");
-        let text = `Diploma (min: ${r.min_classification || "Pass"})`;
+        let text = `${r.qualification_type} (min: ${r.min_classification || "Pass"})`;
         if (diplomaNames) text += `: ${diplomaNames}`;
         return text;
       }
@@ -1146,21 +1148,20 @@ export default function AdminPrograms() {
                             <Label className="text-xs">Qualification Type</Label>
                             <Select value={req.qualification_type} onValueChange={(v) => {
                               updateRequirementCondition(idx, "qualification_type", v);
-                              if (v === "Diploma") {
+                              if (DIPLOMA_LIKE_TYPES.includes(v)) {
                                 updateRequirementCondition(idx, "min_grade", "");
                                 if (!req.min_classification) updateRequirementCondition(idx, "min_classification", "Pass");
                               }
                             }}>
                               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="O-Level">O-Level</SelectItem>
-                                <SelectItem value="A-Level">A-Level</SelectItem>
-                                <SelectItem value="Diploma">Diploma</SelectItem>
-                                <SelectItem value="Certificate">Certificate</SelectItem>
+                                {ALL_QUALIFICATION_TYPES.map((qt) => (
+                                  <SelectItem key={qt} value={qt}>{qt}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          {req.qualification_type !== "Diploma" && (
+                          {!DIPLOMA_LIKE_TYPES.includes(req.qualification_type) && (
                             <div className="space-y-1">
                               <Label className="text-xs">Min Passes Required</Label>
                               <Input type="number" min={1} max={15} value={req.min_passes}
@@ -1168,7 +1169,7 @@ export default function AdminPrograms() {
                                 className="h-8 text-xs" />
                             </div>
                           )}
-                          {req.qualification_type === "Diploma" ? (
+                          {DIPLOMA_LIKE_TYPES.includes(req.qualification_type) ? (
                             <div className="space-y-1">
                               <Label className="text-xs">Minimum Classification</Label>
                               <Select value={req.min_classification || "Pass"} onValueChange={(v) => updateRequirementCondition(idx, "min_classification", v)}>
@@ -1194,11 +1195,11 @@ export default function AdminPrograms() {
                           )}
                         </div>
 
-                        {req.qualification_type === "Diploma" ? (
-                          /* Diploma-specific: select from admin diploma list */
+                        {DIPLOMA_LIKE_TYPES.includes(req.qualification_type) ? (
+                          /* Diploma-like: select from admin diploma list filtered by level */
                           <div className="space-y-2">
-                            <Label className="text-xs font-semibold">Required Diplomas</Label>
-                            <p className="text-xs text-muted-foreground">Select diplomas from the admin diploma module that qualify for this program.</p>
+                            <Label className="text-xs font-semibold">Required {req.qualification_type}s</Label>
+                            <p className="text-xs text-muted-foreground">Select {req.qualification_type.toLowerCase()}s from the admin diploma module that qualify for this program.</p>
                             {((req as any).required_diplomas || []).length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {((req as any).required_diplomas || []).map((diplomaId: string) => {
@@ -1217,33 +1218,38 @@ export default function AdminPrograms() {
                                 })}
                               </div>
                             )}
-                            <div className="grid gap-2 max-h-[200px] overflow-y-auto border rounded p-2">
-                              {diplomas.map((dip) => {
-                                const isSelected = ((req as any).required_diplomas || []).includes(dip.id);
-                                return (
-                                  <div key={dip.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-muted/50 ${isSelected ? 'bg-primary/5' : ''}`}>
-                                    <Checkbox checked={isSelected} onCheckedChange={() => {
-                                      const updated = [...formData.structured_requirements];
-                                      const current = (updated[idx] as any).required_diplomas || [];
-                                      if (isSelected) {
-                                        (updated[idx] as any).required_diplomas = current.filter((id: string) => id !== dip.id);
-                                      } else {
-                                        (updated[idx] as any).required_diplomas = [...current, dip.id];
-                                      }
-                                      setFormData({ ...formData, structured_requirements: updated });
-                                    }} />
-                                    <div className="flex-1">
-                                      <span className="text-sm">{dip.name}</span>
-                                      {dip.field && <span className="text-xs text-muted-foreground ml-1">({dip.field})</span>}
-                                      {dip.institution && <span className="text-xs text-muted-foreground ml-1">- {dip.institution}</span>}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                              {diplomas.length === 0 && (
-                                <p className="text-xs text-muted-foreground italic p-2">No diplomas configured. Add them in the Diplomas module first.</p>
-                              )}
-                            </div>
+                            {(() => {
+                              const filteredDiplomas = diplomas.filter(d => d.level === req.qualification_type);
+                              return (
+                                <div className="grid gap-2 max-h-[200px] overflow-y-auto border rounded p-2">
+                                  {filteredDiplomas.map((dip) => {
+                                    const isSelected = ((req as any).required_diplomas || []).includes(dip.id);
+                                    return (
+                                      <div key={dip.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-muted/50 ${isSelected ? 'bg-primary/5' : ''}`}>
+                                        <Checkbox checked={isSelected} onCheckedChange={() => {
+                                          const updated = [...formData.structured_requirements];
+                                          const current = (updated[idx] as any).required_diplomas || [];
+                                          if (isSelected) {
+                                            (updated[idx] as any).required_diplomas = current.filter((id: string) => id !== dip.id);
+                                          } else {
+                                            (updated[idx] as any).required_diplomas = [...current, dip.id];
+                                          }
+                                          setFormData({ ...formData, structured_requirements: updated });
+                                        }} />
+                                        <div className="flex-1">
+                                          <span className="text-sm">{dip.name}</span>
+                                          {dip.field && <span className="text-xs text-muted-foreground ml-1">({dip.field})</span>}
+                                          {dip.institution && <span className="text-xs text-muted-foreground ml-1">- {dip.institution}</span>}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                  {filteredDiplomas.length === 0 && (
+                                    <p className="text-xs text-muted-foreground italic p-2">No {req.qualification_type.toLowerCase()}s configured. Add them in the Diplomas module first with level "{req.qualification_type}".</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ) : (
                           /* Non-diploma: show compulsory subjects and subject groups */
