@@ -147,11 +147,13 @@ export default function AdminPrograms() {
       qualification_type: string;
       min_passes: number;
       min_grade: string;
+      min_classification?: string;
       compulsory_subjects?: string[];
       subject_groups?: Array<{
         subjects: string[];
         min_required: number;
       }>;
+      required_diplomas?: string[];
     }>,
   });
 
