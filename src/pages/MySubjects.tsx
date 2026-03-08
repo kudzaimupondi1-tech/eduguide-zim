@@ -406,9 +406,9 @@ const MySubjects = () => {
             {added.map((s) => (
               <div
                 key={s.id}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-muted/40 group"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isOLevel ? 'bg-muted/40' : 'bg-accent/30'} group`}
               >
-                <span className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                <span className={`w-7 h-7 rounded-md ${accentBg} flex items-center justify-center text-xs font-bold ${accentText} shrink-0`}>
                   {s.grade || "–"}
                 </span>
                 <span className="text-sm text-foreground flex-1 truncate">{s.subjects?.name || "Unknown"}</span>
