@@ -535,6 +535,7 @@ export type Database = {
           admin_response: string | null
           created_at: string
           id: string
+          is_read_by_student: boolean
           query_text: string
           responded_at: string | null
           status: string
@@ -544,6 +545,7 @@ export type Database = {
           admin_response?: string | null
           created_at?: string
           id?: string
+          is_read_by_student?: boolean
           query_text: string
           responded_at?: string | null
           status?: string
@@ -553,6 +555,7 @@ export type Database = {
           admin_response?: string | null
           created_at?: string
           id?: string
+          is_read_by_student?: boolean
           query_text?: string
           responded_at?: string | null
           status?: string
