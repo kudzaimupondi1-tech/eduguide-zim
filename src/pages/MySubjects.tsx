@@ -458,6 +458,7 @@ const MySubjects = () => {
           </div>
         </main>
       </div>
+      </PageTransition>
     );
   }
 
