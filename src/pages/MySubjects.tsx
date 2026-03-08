@@ -114,12 +114,16 @@ const MySubjects = () => {
 
   const fetchData = async (userId: string) => {
     try {
-      const [subjectsRes, adminRes] = await Promise.all([
+      const [subjectsRes, adminRes, diplomasRes, studentDiplomasRes] = await Promise.all([
         supabase.from("subjects").select("*").eq("is_active", true).order("name"),
         supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
+        supabase.from("diplomas").select("id, name, institution, field, level").eq("is_active", true).order("name"),
+        supabase.from("student_diplomas").select("id, diploma_id, classification, diplomas(id, name, institution, field, level)").eq("user_id", userId),
       ]);
       setAvailableSubjects(subjectsRes.data || []);
       setIsAdmin(!!adminRes.data);
+      setAvailableDiplomas((diplomasRes.data || []) as DiplomaType[]);
+      setStudentDiplomas((studentDiplomasRes.data || []) as any);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
