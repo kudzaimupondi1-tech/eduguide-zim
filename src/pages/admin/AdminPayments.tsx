@@ -50,6 +50,7 @@ export default function AdminPayments() {
   const [refundLoading, setRefundLoading] = useState(false);
   const [queryLoading, setQueryLoading] = useState(false);
   const [queryResult, setQueryResult] = useState<any>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("payments");
 
   const [queryClientCorrelator, setQueryClientCorrelator] = useState("");
