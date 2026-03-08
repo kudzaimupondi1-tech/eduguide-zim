@@ -422,14 +422,28 @@ const MySubjects = () => {
             <SelectTrigger className="h-10 text-sm bg-background flex-[2]">
               <SelectValue placeholder="Select subject" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[300px]">
               {filteredSubjects.length === 0 ? (
                 <div className="p-3 text-xs text-muted-foreground text-center">No subjects found</div>
-              ) : filteredSubjects.map((subject) => (
-                <SelectItem key={subject.id} value={subject.id}>
-                  {subject.name}
-                </SelectItem>
-              ))}
+              ) : (
+                <>
+                  {["Sciences", "Arts", "Commercials"].map(cat => {
+                    const catSubjects = filteredSubjects.filter(s => s.category === cat);
+                    if (catSubjects.length === 0) return null;
+                    return (
+                      <div key={cat}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{cat}</div>
+                        {catSubjects.map(subject => (
+                          <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                        ))}
+                      </div>
+                    );
+                  })}
+                  {filteredSubjects.filter(s => !["Sciences", "Arts", "Commercials"].includes(s.category || "")).map(subject => (
+                    <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                  ))}
+                </>
+              )}
             </SelectContent>
           </Select>
 
@@ -611,11 +625,12 @@ const MySubjects = () => {
                           <SelectValue placeholder="Select qualification type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Diploma">Diploma</SelectItem>
-                          <SelectItem value="Higher National Diploma">Higher National Diploma</SelectItem>
-                          <SelectItem value="National Certificate">National Certificate</SelectItem>
-                          <SelectItem value="National Diploma">National Diploma</SelectItem>
                           <SelectItem value="Certificate">Certificate</SelectItem>
+                          <SelectItem value="National Certificate">National Certificate</SelectItem>
+                          <SelectItem value="Diploma">Diploma</SelectItem>
+                          <SelectItem value="National Diploma">National Diploma</SelectItem>
+                          <SelectItem value="Higher Diploma">Higher Diploma</SelectItem>
+                          <SelectItem value="Higher National Diploma">Higher National Diploma</SelectItem>
                         </SelectContent>
                       </Select>
 
@@ -634,28 +649,23 @@ const MySubjects = () => {
                               <SelectTrigger className="h-10 text-sm bg-background flex-[2]">
                                 <SelectValue placeholder={`Select ${selectedQualificationType}`} />
                               </SelectTrigger>
-                              <SelectContent>
-                                {availableDiplomas
-                                  .filter(d => d.level === selectedQualificationType)
-                                  .filter(d =>
-                                    d.name.toLowerCase().includes(diplomaSearch.toLowerCase()) ||
-                                    (d.field || "").toLowerCase().includes(diplomaSearch.toLowerCase())
-                                  )
-                                  .filter(d => !studentDiplomas.some(sd => sd.diploma_id === d.id))
-                                  .length === 0 ? (
-                                  <div className="p-3 text-xs text-muted-foreground text-center">No {selectedQualificationType}s found</div>
-                                ) : (
-                                  availableDiplomas
+                              <SelectContent className="max-h-[280px]">
+                                {(() => {
+                                  const filtered = availableDiplomas
                                     .filter(d => d.level === selectedQualificationType)
                                     .filter(d =>
                                       d.name.toLowerCase().includes(diplomaSearch.toLowerCase()) ||
                                       (d.field || "").toLowerCase().includes(diplomaSearch.toLowerCase())
                                     )
-                                    .filter(d => !studentDiplomas.some(sd => sd.diploma_id === d.id))
-                                    .map(d => (
+                                    .filter(d => !studentDiplomas.some(sd => sd.diploma_id === d.id));
+                                  return filtered.length === 0 ? (
+                                    <div className="p-3 text-xs text-muted-foreground text-center">No {selectedQualificationType}s found</div>
+                                  ) : (
+                                    filtered.map(d => (
                                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                                     ))
-                                )}
+                                  );
+                                })()}
                               </SelectContent>
                             </Select>
                             <Select value={selectedClassification} onValueChange={setSelectedClassification}>
