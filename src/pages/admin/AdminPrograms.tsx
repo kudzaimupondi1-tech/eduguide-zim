@@ -239,6 +239,24 @@ export default function AdminPrograms() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    setIsSubmitting(true);
+    try {
+      // Delete all program_subjects, program_careers, then programs
+      await supabase.from("program_subjects").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("program_careers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      const { error } = await supabase.from("programs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) throw error;
+      toast({ title: "Success", description: "All programs deleted successfully" });
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting all programs:", error);
+      toast({ title: "Error", description: "Failed to delete all programs", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const openEditDialog = (program: Program) => {
     setEditingProgram(program);
     setFormData({
