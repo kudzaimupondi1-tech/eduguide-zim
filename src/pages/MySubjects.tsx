@@ -81,6 +81,11 @@ const MySubjects = () => {
   const [uniSearch, setUniSearch] = useState("");
   const [oLevelSearch, setOLevelSearch] = useState("");
   const [aLevelSearch, setALevelSearch] = useState("");
+  const [availableDiplomas, setAvailableDiplomas] = useState<DiplomaType[]>([]);
+  const [studentDiplomas, setStudentDiplomas] = useState<StudentDiploma[]>([]);
+  const [selectedDiplomaId, setSelectedDiplomaId] = useState("");
+  const [selectedClassification, setSelectedClassification] = useState("Pass");
+  const [diplomaSearch, setDiplomaSearch] = useState("");
 
   const [universities, setUniversities] = useState<{ id: string; name: string }[]>([]);
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>([]);
