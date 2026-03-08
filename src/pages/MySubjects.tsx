@@ -332,16 +332,21 @@ const MySubjects = () => {
       return text.includes(searchValue.toLowerCase());
     });
     const added = sessionSubjects.filter(s => s.level === level);
-    const icon = level === "O-Level" ? <BookOpen className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />;
+    const isOLevel = level === "O-Level";
+    const icon = isOLevel ? <BookOpen className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />;
+    const accentBg = isOLevel ? "bg-primary/10" : "bg-accent";
+    const accentText = isOLevel ? "text-primary" : "text-accent-foreground";
+    const borderColor = isOLevel ? "border-primary/20" : "border-accent/60";
+    const sectionBg = isOLevel ? "bg-background" : "bg-accent/20";
 
     return (
-      <div className="space-y-3">
+      <div className={`space-y-3 rounded-xl border ${borderColor} ${sectionBg} p-4`}>
         {/* Section label */}
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">{icon}</div>
+          <div className={`w-7 h-7 rounded-lg ${accentBg} flex items-center justify-center ${accentText}`}>{icon}</div>
           <h3 className="text-sm font-semibold text-foreground">{level} Subjects</h3>
           {added.length > 0 && (
-            <Badge variant="secondary" className="text-[10px] ml-auto">{added.length} added</Badge>
+            <Badge variant={isOLevel ? "secondary" : "outline"} className="text-[10px] ml-auto">{added.length} added</Badge>
           )}
         </div>
 
