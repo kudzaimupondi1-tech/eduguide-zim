@@ -86,6 +86,8 @@ interface ProgramSubject {
 }
 
 const GRADES = ["A", "B", "C", "D", "E", "O", "F"];
+const DIPLOMA_LIKE_TYPES = ["Diploma", "Higher National Diploma", "National Certificate", "National Diploma", "Certificate"];
+const ALL_QUALIFICATION_TYPES = ["O-Level", "A-Level", ...DIPLOMA_LIKE_TYPES];
 
 const programColumns: ExcelColumn[] = [
   { key: "name", header: "Program Name", required: true },
