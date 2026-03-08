@@ -433,13 +433,15 @@ const Recommendations = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {displayPrograms.map(program => (
-                <Card key={program.id} className={`group hover:shadow-lg transition-all ${program.matchData.score === 100 ? "border-green-300 bg-green-50/50 dark:bg-green-950/10" : program.matchData.score >= 50 ? "border-yellow-200" : ""}`}>
+                <Card key={program.id} className={`group hover:shadow-lg transition-all ${program.matchData.score === 100 ? "border-green-300 bg-green-50/50 dark:bg-green-950/10" : program.matchData.score >= 50 ? "border-yellow-200" : "opacity-75"}`}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           {program.matchData.score === 100 && <Badge className="bg-green-600 text-white"><Star className="w-3 h-3 mr-1" /> 100% Match</Badge>}
-                          {program.matchData.score === 50 && <Badge className="bg-yellow-500 text-white">50% Match</Badge>}
+                          {program.matchData.score >= 50 && program.matchData.score < 100 && <Badge className="bg-yellow-500 text-white">{program.matchData.score}% Match</Badge>}
+                          {program.matchData.score > 0 && program.matchData.score < 50 && <Badge variant="outline" className="text-orange-600 border-orange-300">{program.matchData.score}% Match</Badge>}
+                          {program.matchData.score === 0 && <Badge variant="outline" className="text-destructive border-destructive/30">0% Match</Badge>}
                           {program.degree_type && <Badge variant="outline">{program.degree_type}</Badge>}
                         </div>
                         <CardTitle className="text-lg">{program.name}</CardTitle>
