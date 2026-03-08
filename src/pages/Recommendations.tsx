@@ -295,7 +295,9 @@ const Recommendations = () => {
     const topUnis = Array.from(uniScores.entries()).sort((a, b) => b[1] - a[1]).slice(0, universityCountFilter).map(([id]) => id);
     return baseList.filter(p => topUnis.includes(p.university_id));
   };
-  const displayPrograms = getFilteredByPayment();
+  const allDisplayPrograms = getFilteredByPayment();
+  const displayPrograms = allDisplayPrograms.filter(p => p.entry_type === 'normal' || !p.entry_type);
+  const diplomaPrograms = allDisplayPrograms.filter(p => p.entry_type && p.entry_type !== 'normal');
 
   if (loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
@@ -445,6 +447,62 @@ const Recommendations = () => {
                 <p className="text-muted-foreground">No programs match your grades or search criteria.</p>
               </CardContent></Card>
             )}
+
+            {diplomaPrograms.length > 0 && (
+              <div className="mt-10">
+                <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5 text-yellow-500" /> Alternative Pathways
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  These programs require a diploma or alternative qualification for entry. You may qualify through bridging courses or diploma programs.
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {diplomaPrograms.map(program => (
+                    <Card key={program.id} className="group hover:shadow-lg transition-all border-dashed border-amber-300 dark:border-amber-700">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <Badge className="bg-amber-500 text-white capitalize">{program.entry_type} Entry</Badge>
+                              {program.degree_type && <Badge variant="outline">{program.degree_type}</Badge>}
+                            </div>
+                            <CardTitle className="text-lg">{program.name}</CardTitle>
+                            <CardDescription className="flex items-center gap-1 mt-1"><GraduationCap className="w-4 h-4" />{program.universities?.name}</CardDescription>
+                          </div>
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">{program.matchData.score}%</div>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleStar(program, program.matchData.score)}>
+                              <Star className={`w-4 h-4 ${starredIds.has(program.id) ? "text-yellow-500 fill-yellow-500" : "text-muted-foreground"}`} />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {program.description && <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{program.description}</p>}
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
+                          {program.universities?.location && <div className="flex items-center gap-1"><MapPin className="w-4 h-4" />{program.universities.location}</div>}
+                          {program.duration_years && <div className="flex items-center gap-1"><Clock className="w-4 h-4" />{program.duration_years} years</div>}
+                        </div>
+                        {program.program_careers && program.program_careers.length > 0 && (
+                          <div className="mb-4">
+                            <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Briefcase className="w-3.5 h-3.5" /> Career Paths:</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {program.program_careers.slice(0, 4).map((pc, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{pc.careers?.name}</Badge>
+                              ))}
+                              {program.program_careers.length > 4 && (
+                                <Badge variant="outline" className="text-xs">+{program.program_careers.length - 4} more</Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <Button size="sm" className="w-full" onClick={() => setSelectedProgramDetail(program)}>View Details <ChevronRight className="w-4 h-4 ml-2" /></Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -456,6 +514,11 @@ const Recommendations = () => {
           {selectedProgramDetail && (
             <>
               <DialogHeader>
+                <div className="flex items-center gap-2 mb-1">
+                  {selectedProgramDetail.entry_type && selectedProgramDetail.entry_type !== 'normal' && (
+                    <Badge className="bg-amber-500 text-white capitalize">{selectedProgramDetail.entry_type} Entry</Badge>
+                  )}
+                </div>
                 <DialogTitle className="text-xl">{selectedProgramDetail.name}</DialogTitle>
                 <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1"><GraduationCap className="w-4 h-4" />{selectedProgramDetail.universities?.name}</p>
               </DialogHeader>
