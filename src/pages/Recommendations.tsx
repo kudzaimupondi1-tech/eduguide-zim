@@ -179,18 +179,29 @@ const Recommendations = () => {
               }
             }
           } else {
-            // If no specific diploma is required, check if student has ANY diploma
+            // If no specific diploma name is required, match by qualification type (Diploma vs Certificate)
             totalRequirements++;
             if (studentDiplomas.length === 0) {
               // Student has no diplomas at all
               details.push(`✗ ${qLevel}: No diploma/certificate submitted`);
             } else {
-              const anyMatch = studentDiplomas.some(sd => meetsClassification(sd.classification, minGrade));
-              if (anyMatch) {
+              // Match by the diploma level (e.g., "Certificate" should match certificates, not diplomas)
+              const typeMatch = studentDiplomas.find(sd => {
+                const studentLevel = (sd.diplomas?.level || "").toLowerCase();
+                const requiredType = qLevel.toLowerCase();
+                
+                // Direct match or contains match
+                if (studentLevel.includes(requiredType) || requiredType.includes(studentLevel)) {
+                  return meetsClassification(sd.classification, minGrade);
+                }
+                return false;
+              });
+              
+              if (typeMatch) {
                 satisfiedRequirements++;
                 details.push(`✓ ${qLevel}: Diploma/certificate submitted`);
               } else {
-                details.push(`✗ ${qLevel}: Classification not met`);
+                details.push(`✗ ${qLevel}: No matching ${qLevel} found`);
               }
             }
           }
