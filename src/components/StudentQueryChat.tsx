@@ -76,7 +76,7 @@ export const StudentQueryChat = ({ userId, open, onClose, onRead }: { userId: st
   if (!open) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[360px] max-w-[calc(100vw-2rem)] bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden" style={{ height: "480px" }}>
+    <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 z-50 w-full sm:w-[360px] sm:max-w-[calc(100vw-2rem)] bg-card border border-border sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col overflow-hidden" style={{ height: "min(480px, 85vh)" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
         <div className="flex items-center gap-2">

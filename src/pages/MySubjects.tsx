@@ -708,7 +708,7 @@ const MySubjects = () => {
                 <div>
                   <h3 className="text-sm font-bold text-foreground mb-1">Choose Your Plan</h3>
                   <p className="text-[11px] text-muted-foreground mb-4">Select how many universities you'd like recommendations from</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     {A_LEVEL_PRICING.map((option) => {
                       const isSelected = selectedPricing === option.label;
                       return (
