@@ -306,6 +306,7 @@ export default function AdminUsers() {
                         <TableHead>Email</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>Roles</TableHead>
+                        <TableHead>Recommendations</TableHead>
                         <TableHead>Joined</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
