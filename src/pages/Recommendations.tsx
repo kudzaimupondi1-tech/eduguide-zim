@@ -153,44 +153,52 @@ const Recommendations = () => {
         return CLASSIFICATION_ORDER.indexOf(studentClass) <= CLASSIFICATION_ORDER.indexOf(minClass);
       };
 
+      // Separate diploma/certificate blocks from other blocks
+      const diplomaBlocks: any[] = [];
+      const otherBlocks: any[] = [];
+      
       for (const block of structured) {
         const qLevel = block.qualification_type || "A-Level";
-        const minPasses = block.min_passes || 0;
-        const minGrade = block.min_grade || null;
-        const compulsorySubjects: string[] = block.compulsory_subjects || [];
-        const subjectGroups: any[] = block.subject_groups || [];
-
         const qLevelLower = qLevel.toLowerCase();
         const isDiplomaBlock = qLevelLower.includes("diploma") || qLevelLower.includes("certificate") || qLevelLower.includes("mature") || qLevelLower.includes("hnd") || qLevelLower.includes("national");
-
+        
         if (isDiplomaBlock) {
-          if (compulsorySubjects.length > 0) {
-            for (const reqName of compulsorySubjects) {
-              totalRequirements++;
-              const match = studentDiplomas.find(sd => 
-                (sd.diplomas?.name || "").toLowerCase().includes(reqName.toLowerCase()) ||
-                reqName.toLowerCase().includes((sd.diplomas?.name || "").toLowerCase())
-              );
-              if (match && meetsClassification(match.classification, minGrade)) {
-                satisfiedRequirements++;
-                details.push(`✓ Diploma ${reqName}: ${match.classification || 'Pass'}`);
-              } else {
-                details.push(`✗ Diploma ${reqName}: not met`);
+          diplomaBlocks.push(block);
+        } else {
+          otherBlocks.push(block);
+        }
+      }
+
+      // Process diploma/certificate blocks with OR logic if conditionLogic is OR
+      if (diplomaBlocks.length > 0) {
+        if (conditionLogic === "OR") {
+          // OR logic: at least ONE diploma/certificate block must be satisfied
+          totalRequirements++;
+          let anyDiplomaSatisfied = false;
+          const diplomaDetails: string[] = [];
+          
+          for (const block of diplomaBlocks) {
+            const qLevel = block.qualification_type || "Diploma";
+            const minGrade = block.min_grade || null;
+            const compulsorySubjects: string[] = block.compulsory_subjects || [];
+            
+            if (compulsorySubjects.length > 0) {
+              for (const reqName of compulsorySubjects) {
+                const match = studentDiplomas.find(sd => 
+                  (sd.diplomas?.name || "").toLowerCase().includes(reqName.toLowerCase()) ||
+                  reqName.toLowerCase().includes((sd.diplomas?.name || "").toLowerCase())
+                );
+                if (match && meetsClassification(match.classification, minGrade)) {
+                  anyDiplomaSatisfied = true;
+                  diplomaDetails.push(`✓ Diploma ${reqName}: ${match.classification || 'Pass'}`);
+                } else {
+                  diplomaDetails.push(`✗ ${reqName}: not met`);
+                }
               }
-            }
-          } else {
-            // If no specific diploma name is required, match by qualification type (Diploma vs Certificate)
-            totalRequirements++;
-            if (studentDiplomas.length === 0) {
-              // Student has no diplomas at all
-              details.push(`✗ ${qLevel}: No diploma/certificate submitted`);
             } else {
-              // Match by the diploma level (e.g., "Certificate" should match certificates, not diplomas)
               const typeMatch = studentDiplomas.find(sd => {
                 const studentLevel = (sd.diplomas?.level || "").toLowerCase();
                 const requiredType = qLevel.toLowerCase();
-                
-                // Direct match or contains match
                 if (studentLevel.includes(requiredType) || requiredType.includes(studentLevel)) {
                   return meetsClassification(sd.classification, minGrade);
                 }
@@ -198,15 +206,72 @@ const Recommendations = () => {
               });
               
               if (typeMatch) {
-                satisfiedRequirements++;
-                details.push(`✓ ${qLevel}: Diploma/certificate submitted`);
+                anyDiplomaSatisfied = true;
+                diplomaDetails.push(`✓ ${qLevel}: Submitted`);
               } else {
-                details.push(`✗ ${qLevel}: No matching ${qLevel} found`);
+                diplomaDetails.push(`✗ ${qLevel}: No matching ${qLevel} found`);
               }
             }
           }
-          continue;
+          
+          if (anyDiplomaSatisfied) {
+            satisfiedRequirements++;
+          }
+          details.push(...diplomaDetails);
+        } else {
+          // AND logic: ALL diploma/certificate blocks must be satisfied
+          for (const block of diplomaBlocks) {
+            const qLevel = block.qualification_type || "Diploma";
+            const minGrade = block.min_grade || null;
+            const compulsorySubjects: string[] = block.compulsory_subjects || [];
+            
+            if (compulsorySubjects.length > 0) {
+              for (const reqName of compulsorySubjects) {
+                totalRequirements++;
+                const match = studentDiplomas.find(sd => 
+                  (sd.diplomas?.name || "").toLowerCase().includes(reqName.toLowerCase()) ||
+                  reqName.toLowerCase().includes((sd.diplomas?.name || "").toLowerCase())
+                );
+                if (match && meetsClassification(match.classification, minGrade)) {
+                  satisfiedRequirements++;
+                  details.push(`✓ Diploma ${reqName}: ${match.classification || 'Pass'}`);
+                } else {
+                  details.push(`✗ Diploma ${reqName}: not met`);
+                }
+              }
+            } else {
+              totalRequirements++;
+              if (studentDiplomas.length === 0) {
+                details.push(`✗ ${qLevel}: No diploma/certificate submitted`);
+              } else {
+                const typeMatch = studentDiplomas.find(sd => {
+                  const studentLevel = (sd.diplomas?.level || "").toLowerCase();
+                  const requiredType = qLevel.toLowerCase();
+                  if (studentLevel.includes(requiredType) || requiredType.includes(studentLevel)) {
+                    return meetsClassification(sd.classification, minGrade);
+                  }
+                  return false;
+                });
+                
+                if (typeMatch) {
+                  satisfiedRequirements++;
+                  details.push(`✓ ${qLevel}: Diploma/certificate submitted`);
+                } else {
+                  details.push(`✗ ${qLevel}: No matching ${qLevel} found`);
+                }
+              }
+            }
+          }
         }
+      }
+
+      // Process other (A-Level, O-Level, etc.) blocks
+      for (const block of otherBlocks) {
+        const qLevel = block.qualification_type || "A-Level";
+        const minPasses = block.min_passes || 0;
+        const minGrade = block.min_grade || null;
+        const compulsorySubjects: string[] = block.compulsory_subjects || [];
+        const subjectGroups: any[] = block.subject_groups || [];
 
         // Standard subject-based block: count each requirement individually
         if (minPasses > 0) {
