@@ -273,7 +273,6 @@ const Recommendations = () => {
         const compulsorySubjects: string[] = block.compulsory_subjects || [];
         const subjectGroups: any[] = block.subject_groups || [];
 
-<<<<<<< HEAD
         // Standard subject-based block: count each requirement individually
         if (minPasses > 0) {
           totalRequirements++;
@@ -288,17 +287,6 @@ const Recommendations = () => {
 
         for (const subjName of compulsorySubjects) {
           totalRequirements++;
-          const studentMatch = studentSubjects.find(ss => (ss.subjects?.name || "").toLowerCase() === subjName.toLowerCase());
-          if (studentMatch && meetsGradeRequirement(studentMatch.grade, minGrade)) {
-            satisfiedRequirements++;
-            details.push(`✓ Compulsory ${subjName}: ${studentMatch.grade}`);
-          } else {
-            details.push(`✗ Compulsory ${subjName}: not met`);
-=======
-        const validPasses = countValidPasses(qLevel, minGrade);
-        let compulsorySatisfied = true;
-
-        for (const subjName of compulsorySubjects) {
           const alternatives = subjName.split(" OR ").map(s => s.trim());
           let anyMatched = false;
           let bestMatch: StudentSubject | null = null;
@@ -314,11 +302,10 @@ const Recommendations = () => {
           }
 
           if (!anyMatched) {
-            compulsorySatisfied = false;
             details.push(`✗ Compulsory ${subjName.replace(/ OR /g, ' or ')}: not met`);
           } else {
+            satisfiedRequirements++;
             details.push(`✓ Compulsory ${bestMatch?.subjects?.name}: ${bestMatch?.grade}`);
->>>>>>> b17f7b7 (Describe what changes you made)
           }
         }
 

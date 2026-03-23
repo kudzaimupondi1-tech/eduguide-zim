@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link, useNavigate } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refId = searchParams.get("ref");
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,6 +114,13 @@ const AuthPage = () => {
         }
         
         if (data.session && data.user) {
+          if (refId) {
+            try {
+              await supabase.from("profiles").update({ referred_by: refId }).eq("user_id", data.user.id);
+            } catch (err) {
+              console.error("Failed to set referrer", err);
+            }
+          }
           // Auto-confirmed signup
           if (formData.role === "admin") {
             try {

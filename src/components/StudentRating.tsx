@@ -4,12 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const StudentRating = () => {
-<<<<<<< HEAD
-  const [currentRating, setCurrentRating] = useState<"up" | "down" | null>(null);
-=======
   const [currentRating, setCurrentRating] = useState<string | null>(null);
   const [totalLikes, setTotalLikes] = useState<number>(0);
->>>>>>> b17f7b7 (Describe what changes you made)
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -17,13 +13,13 @@ export const StudentRating = () => {
     fetchLikesCount();
   }, []);
 
-<<<<<<< HEAD
-  const normalizeRating = (value?: string | null): "up" | "down" | null => {
+  const normalizeRating = (value?: string | null): "like" | "dislike" | null => {
     if (!value) return null;
-    if (["thumbs-up", "like", "up"].includes(value)) return "up";
-    if (["thumbs-down", "dislike", "down"].includes(value)) return "down";
+    if (["thumbs-up", "like", "up"].includes(value)) return "like";
+    if (["thumbs-down", "dislike", "down"].includes(value)) return "dislike";
     return null;
-=======
+  };
+
   const fetchLikesCount = async () => {
     // Count total likes
     const { count } = await supabase
@@ -32,7 +28,6 @@ export const StudentRating = () => {
       .eq("rating_type", "like");
 
     if (count !== null) setTotalLikes(count);
->>>>>>> b17f7b7 (Describe what changes you made)
   };
 
   const fetchRating = async () => {
@@ -55,7 +50,7 @@ export const StudentRating = () => {
     setCurrentRating(normalizeRating(data?.rating_type));
   };
 
-  const handleRate = async (type: "up" | "down") => {
+  const handleRate = async (type: "like" | "dislike") => {
     setLoading(true);
     try {
       const {
@@ -67,7 +62,7 @@ export const StudentRating = () => {
         return;
       }
 
-      const ratingType = type === "up" ? "like" : "dislike";
+      const ratingType = type;
 
       const { error } = await supabase
         .from("system_ratings")
@@ -75,17 +70,13 @@ export const StudentRating = () => {
           {
             user_id: user.id,
             rating_type: ratingType,
-            star_rating: type === "up" ? 10 : 1,
+            star_rating: type === "like" ? 10 : 1,
           },
           { onConflict: "user_id" }
         );
 
       if (error) throw error;
 
-<<<<<<< HEAD
-      setCurrentRating(type);
-      toast.success(type === "up" ? "Thanks for the positive feedback! 🎉" : "Thanks for your feedback. We'll work to improve!");
-=======
       // Optimistic update
       if (type === "like" && currentRating !== "like") {
         setTotalLikes(prev => prev + 1);
@@ -94,10 +85,8 @@ export const StudentRating = () => {
       }
 
       setCurrentRating(type);
-      toast.success(type === "like" ? "Thanks for the positive feedback! \uD83C\uDF89" : "Thanks for your feedback. We'll work to improve!");
-      // We don't necessarily need to fetchLikesCount() here if we optimistically updated, but keeping it to sync is fine.
+      toast.success(type === "like" ? "Thanks for the positive feedback! 🎉" : "Thanks for your feedback. We'll work to improve!");
       fetchLikesCount();
->>>>>>> b17f7b7 (Describe what changes you made)
     } catch (error: any) {
       console.error("Rating error:", error);
       toast.error(error?.message ? `Failed to submit rating: ${error.message}` : "Failed to submit rating");
@@ -127,36 +116,11 @@ export const StudentRating = () => {
 
   const formatLikes = (num: number) => {
     // Show the full number instead of shorthand per user request
-    const value = 10000 + num;
+    const value = 1057 + num;
     return value.toString();
   };
 
   return (
-<<<<<<< HEAD
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => handleRate("up")}
-        disabled={loading}
-        className={`p-2 rounded-xl transition-all ${
-          currentRating === "up"
-            ? "bg-primary/15 text-primary scale-110"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        } disabled:opacity-50`}
-      >
-        <ThumbsUp className="w-5 h-5" />
-      </button>
-      <button
-        onClick={() => handleRate("down")}
-        disabled={loading}
-        className={`p-2 rounded-xl transition-all ${
-          currentRating === "down"
-            ? "bg-destructive/15 text-destructive scale-110"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        } disabled:opacity-50`}
-      >
-        <ThumbsDown className="w-5 h-5" />
-      </button>
-=======
     <div className="flex items-center justify-between gap-4 flex-wrap">
       <div className="flex items-center gap-2">
         <div className="flex items-center bg-muted rounded-full overflow-hidden">
@@ -191,7 +155,6 @@ export const StudentRating = () => {
           <span>Share</span>
         </button>
       </div>
->>>>>>> b17f7b7 (Describe what changes you made)
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Send, MessageSquare, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,25 @@ export const StudentQueryForm = ({ userId }: { userId: string }) => {
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [queriesEnabled, setQueriesEnabled] = useState(true);
+
+  useEffect(() => {
+    const checkQueriesStatus = async () => {
+      try {
+        let isBlocked = false;
+        const { data: profile } = await supabase.from("profiles").select("chat_blocked").eq("user_id", userId).single();
+        if (profile?.chat_blocked) isBlocked = true;
+
+        const { data } = await supabase.from("system_settings").select("setting_value").eq("setting_key", "queries_settings").maybeSingle();
+        if (isBlocked) {
+          setQueriesEnabled(false);
+        } else if (data?.setting_value && typeof (data.setting_value as any).enabled === "boolean") {
+          setQueriesEnabled((data.setting_value as any).enabled);
+        }
+      } catch (err) {}
+    };
+    checkQueriesStatus();
+  }, []);
 
   const wordCount = query.trim() ? query.trim().split(/\s+/).length : 0;
   const isOverLimit = wordCount > MAX_WORDS;
@@ -64,9 +83,10 @@ export const StudentQueryForm = ({ userId }: { userId: string }) => {
         ) : (
           <>
             <Textarea
-              placeholder="Type your question here..."
+              placeholder={queriesEnabled ? "Type your question here..." : "Queries are closed by Admin"}
               value={query}
               onChange={handleChange}
+              disabled={!queriesEnabled || submitting}
               rows={2}
               className="resize-none rounded-xl text-sm mb-2"
             />
@@ -77,7 +97,7 @@ export const StudentQueryForm = ({ userId }: { userId: string }) => {
               <Button
                 size="sm"
                 onClick={handleSubmit}
-                disabled={!query.trim() || isOverLimit || submitting}
+                disabled={!query.trim() || isOverLimit || submitting || !queriesEnabled}
                 className="rounded-xl gap-2"
               >
                 <Send className="w-3.5 h-3.5" />

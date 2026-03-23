@@ -20,6 +20,7 @@ export const StudentQueryChat = ({ userId, open, onClose, onRead }: { userId: st
   const [queries, setQueries] = useState<Query[]>([]);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [queriesEnabled, setQueriesEnabled] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const wordCount = message.trim() ? message.trim().split(/\s+/).length : 0;
@@ -28,10 +29,29 @@ export const StudentQueryChat = ({ userId, open, onClose, onRead }: { userId: st
   useEffect(() => {
     if (open) {
       fetchQueries();
+      checkQueriesStatus();
       // Clear badge when chat is opened
       onRead?.();
     }
   }, [open]);
+
+  const checkQueriesStatus = async () => {
+    try {
+      let isBlocked = false;
+      const { data: profile } = await supabase.from("profiles").select("chat_blocked").eq("user_id", userId).single();
+      if (profile?.chat_blocked) isBlocked = true;
+
+      const { data } = await supabase.from("system_settings").select("setting_value").eq("setting_key", "queries_settings").maybeSingle();
+      
+      if (isBlocked) {
+        setQueriesEnabled(false);
+      } else if (data?.setting_value && typeof (data.setting_value as any).enabled === "boolean") {
+        setQueriesEnabled((data.setting_value as any).enabled);
+      }
+    } catch (err) {
+      // Proceed with enabled by default
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -134,10 +154,11 @@ export const StudentQueryChat = ({ userId, open, onClose, onRead }: { userId: st
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <Textarea
-              placeholder="Type your question..."
+              placeholder={queriesEnabled ? "Type your question..." : "Queries are closed by Admin"}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
+              disabled={!queriesEnabled || submitting}
               rows={1}
               className="resize-none rounded-xl text-sm min-h-[40px] max-h-[80px]"
             />
@@ -148,7 +169,7 @@ export const StudentQueryChat = ({ userId, open, onClose, onRead }: { userId: st
           <Button
             size="icon"
             onClick={handleSend}
-            disabled={!message.trim() || isOverLimit || submitting}
+            disabled={!message.trim() || isOverLimit || submitting || !queriesEnabled}
             className="h-10 w-10 rounded-xl flex-shrink-0"
           >
             <Send className="w-4 h-4" />

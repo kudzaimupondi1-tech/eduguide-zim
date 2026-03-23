@@ -61,6 +61,7 @@ const StepIndicator = ({ current, total, labels }: { current: number; total: num
 const MySubjects = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [studentLevel, setStudentLevel] = useState<"O-Level" | "A-Level" | null>(null);
@@ -115,16 +116,18 @@ const MySubjects = () => {
 
   const fetchData = async (userId: string) => {
     try {
-      const [subjectsRes, adminRes, diplomasRes, studentDiplomasRes] = await Promise.all([
+      const [subjectsRes, adminRes, diplomasRes, studentDiplomasRes, profileRes] = await Promise.all([
         supabase.from("subjects").select("*").eq("is_active", true).order("name"),
         supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
         supabase.from("diplomas").select("id, name, institution, field, level").eq("is_active", true).order("name"),
         supabase.from("student_diplomas").select("id, diploma_id, classification, diplomas(id, name, institution, field, level)").eq("user_id", userId),
+        supabase.from("profiles").select("*").eq("user_id", userId).single(),
       ]);
       setAvailableSubjects(subjectsRes.data || []);
       setIsAdmin(!!adminRes.data);
       setAvailableDiplomas((diplomasRes.data || []) as DiplomaType[]);
       setStudentDiplomas((studentDiplomasRes.data || []) as any);
+      setProfile(profileRes.data || null);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -331,6 +334,30 @@ const MySubjects = () => {
         }
       }
     }, 2000);
+  };
+
+  const hasFreeReward = profile?.referral_reward_unlocked && !profile?.referral_reward_used;
+
+  const handleFreeRewardBypass = async (level: "o-level" | "a-level", uniParam: string = "") => {
+    if (!user) return;
+    setPaymentLoading(true);
+    try {
+      await supabase.from("profiles").update({ referral_reward_used: true }).eq("user_id", user.id);
+      toast.success("Used your free reward! Generating recommendations...");
+      
+      // Navigate to recommendations
+      let path = `/recommendations?level=${level}`;
+      if (level === "a-level") {
+        // Get the university count from pricing mapping or default to 3
+        const selectedPricingObj = A_LEVEL_PRICING.find(p => p.label === selectedPricing);
+        const count = selectedPricingObj?.count || 3;
+        path += `&universities=${count}&uni_ids=${uniParam}`;
+      }
+      navigate(path);
+    } catch (error) {
+       toast.error("Failed to redeem reward.");
+       setPaymentLoading(false);
+    }
   };
 
   const addedIds = sessionSubjects.map(s => `${s.subject_id}-${s.level}`);
@@ -881,6 +908,12 @@ const MySubjects = () => {
                       {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <CreditCard className="w-4 h-4 mr-1.5" />}
                       {isAdmin ? "Get Recommendations (Free)" : "Pay $1.00 & Get Recommendations"}
                     </Button>
+                    {hasFreeReward && !isAdmin && (
+                      <Button onClick={() => handleFreeRewardBypass("o-level")} variant="secondary" className="h-10 rounded-xl font-semibold px-6" disabled={paymentLoading}>
+                        <Award className="w-4 h-4 mr-1.5 text-primary" />
+                        Use Free Referral Reward
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <Button
@@ -1093,6 +1126,18 @@ const MySubjects = () => {
                       {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <CreditCard className="w-4 h-4 mr-1.5" />}
                       {isAdmin ? "Get Recommendations" : `Pay $${selectedPricingObj?.price.toFixed(2) || "0.00"} & Continue`}
                     </Button>
+
+                    {hasFreeReward && !isAdmin && selectedPricing && (
+                      <Button 
+                        onClick={() => handleFreeRewardBypass("a-level", selectedUniversities.join(","))} 
+                        variant="secondary" 
+                        disabled={(limit > 0 && selectedUniversities.length !== limit) || paymentLoading}
+                        className="h-10 rounded-xl font-semibold px-6"
+                      >
+                        <Award className="w-4 h-4 mr-1.5 text-primary" />
+                        Use Referral Reward
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -7,9 +7,13 @@ import {
   Phone,
   Camera,
   ArrowLeft,
+  ArrowsUpFromLine,
   Save,
   Loader2,
-  LogOut
+  LogOut,
+  Share2,
+  Users as UsersIcon,
+  Award
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +38,7 @@ const ProfilePage = () => {
     email: "",
     phone: "",
   });
+  const [referralStats, setReferralStats] = useState({ count: 0, unlocked: false });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -73,6 +78,21 @@ const ProfilePage = () => {
           email: data.email || "",
           phone: data.phone || "",
         });
+        
+        const { count } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true })
+          .eq("referred_by", userId)
+          .not("recommendation_viewed_at", "is", null);
+          
+        setReferralStats({ count: count || 0, unlocked: data.referral_reward_unlocked || false });
+
+        if (count && count >= 5 && !data.referral_reward_unlocked) {
+          await supabase.from("profiles").update({ referral_reward_unlocked: true }).eq("user_id", userId);
+          setReferralStats({ count, unlocked: true });
+          setProfile(prev => prev ? { ...prev, referral_reward_unlocked: true } : null);
+          toast.success("Congratulations! You've unlocked a free premium recommendation view!");
+        }
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -188,6 +208,71 @@ const ProfilePage = () => {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Referral Program */}
+        <Card className="mb-8 overflow-hidden relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-50" />
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-primary" />
+              <CardTitle>Referral Program</CardTitle>
+            </div>
+            <CardDescription>Invite 5 friends and earn a free premium university recommendation view when they check their matches!</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 relative z-10">
+            <div className="space-y-2">
+              <Label>Your Personal Referral Link</Label>
+              <div className="flex gap-2">
+                <Input 
+                  readOnly 
+                  value={`${window.location.origin}/auth?ref=${user?.id}`} 
+                  className="bg-muted/50 font-mono text-xs"
+                />
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/auth?ref=${user?.id}`);
+                    toast.success("Link copied to clipboard!");
+                  }}
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">Progress</span>
+                <span className="font-bold">{referralStats.count} / 5 Qualified Referrals</span>
+              </div>
+              <div className="h-3 w-full bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-1000 ease-in-out" 
+                  style={{ width: `${Math.min(100, (referralStats.count / 5) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {profile?.referral_reward_unlocked ? (
+              <div className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 p-4 rounded-xl flex items-start gap-3 border border-green-200 dark:border-green-800">
+                <Award className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-sm">Reward Unlocked!</h4>
+                  <p className="text-xs opacity-90 mt-1">
+                    {profile?.referral_reward_used 
+                      ? "You have already used your free premium recommendation view." 
+                      : "You have successfully earned your free premium recommendation view! Head over to Recommendations to use it."}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic flex items-center gap-1.5 bg-muted/30 p-3 rounded-lg border border-border/50">
+                <UsersIcon className="w-4 h-4" />
+                {Math.max(0, 5 - referralStats.count)} more qualified referrals needed to unlock the reward.
+              </p>
+            )}
           </CardContent>
         </Card>
 

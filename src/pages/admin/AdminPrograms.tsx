@@ -120,6 +120,8 @@ interface ProgramFormData {
       subjects: string[];
       min_required: number;
     }>;
+    min_classification?: string;
+    required_diplomas?: string[];
   }>;
   min_experience_years: number;
   other_requirements: string;
@@ -170,7 +172,6 @@ export default function AdminPrograms() {
     is_active: true,
     entry_type: "normal",
     condition_logic: "AND",
-<<<<<<< HEAD
     structured_requirements: [] as Array<{
       qualification_type: string;
       min_passes: number;
@@ -183,11 +184,8 @@ export default function AdminPrograms() {
       }>;
       required_diplomas?: string[];
     }>,
-=======
-    structured_requirements: [],
     min_experience_years: 0,
     other_requirements: "",
->>>>>>> b17f7b7 (Describe what changes you made)
   });
 
   const fetchData = async () => {
@@ -1020,22 +1018,11 @@ export default function AdminPrograms() {
                       <Input type="number" min={1} max={20} value={minRequiredFromGroup} onChange={(e) => setMinRequiredFromGroup(parseInt(e.target.value) || 1)} />
                     </div>
                   )}
-                  <p className="text-sm text-muted-foreground">{editingCompulsory ? "Select subjects that must ALL be present. To allow alternatives, select multiple and click 'Group as OR'." : "Select subjects for this group or add a new one."}</p>
+                  <p className="text-sm text-muted-foreground">{editingCompulsory ? "Select subjects that must ALL be present. To allow alternatives, select multiple and click 'Join selected with OR' at the bottom." : "Select subjects for this group or add a new one."}</p>
                   {tempSelectedSubjects.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label className="text-xs font-semibold">Selected Subjects ({tempSelectedSubjects.length}):</Label>
-                        {editingCompulsory && tempSelectedSubjects.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => setTempSelectedSubjects([tempSelectedSubjects.join(" OR ")])}
-                          >
-                            Group as OR
-                          </Button>
-                        )}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {tempSelectedSubjects.map((sub) => (
@@ -1055,22 +1042,77 @@ export default function AdminPrograms() {
                     </div>
                   )}
                   <div className="grid gap-2 max-h-[40vh] overflow-y-auto border rounded p-2">
-                    {Array.from(new Set(subjects.map(s => s.name))).map((subjectName) => {
-                      const subjectData = subjects.find(s => s.name === subjectName);
-                      const category = subjectData?.category || subjectData?.level || "";
-                      return (
-                        <div key={subjectName} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-muted/50 ${tempSelectedSubjects.includes(subjectName) ? 'bg-primary/5' : ''}`}>
-                          <Checkbox checked={tempSelectedSubjects.includes(subjectName)} onCheckedChange={() => toggleTempSubject(subjectName)} />
-                          <div className="flex-1">{subjectName} {category && <span className="text-xs text-muted-foreground">({category})</span>}</div>
-                        </div>
-                      );
-                    })}
+                    {(() => {
+                      const grouped: Record<string, typeof subjects> = {};
+                      const uniqueSubjects = Array.from(new Set(subjects.map(s => s.name)))
+                        .map(name => subjects.find(s => s.name === name)!);
+                      
+                      uniqueSubjects.forEach(s => {
+                        const cat = s.category || "Other / General";
+                        if (!grouped[cat]) grouped[cat] = [];
+                        grouped[cat].push(s);
+                      });
+
+                      return Object.entries(grouped)
+                        .sort((a, b) => a[0].localeCompare(b[0]))
+                        .map(([category, catSubjects]) => {
+                          const isAllSelected = catSubjects.length > 0 && catSubjects.every(s => tempSelectedSubjects.includes(s.name));
+                          
+                          return (
+                            <div key={category} className="mb-3 border border-border/50 rounded-lg overflow-hidden">
+                              <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 sticky top-0 backdrop-blur z-10 border-b border-border/50">
+                                <Checkbox 
+                                  checked={isAllSelected} 
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setTempSelectedSubjects(prev => Array.from(new Set([...prev, ...catSubjects.map(s => s.name)])));
+                                    } else {
+                                      setTempSelectedSubjects(prev => prev.filter(name => !catSubjects.some(s => s.name === name)));
+                                    }
+                                  }} 
+                                />
+                                <h4 className="font-semibold text-sm text-foreground/80 cursor-pointer select-none" onClick={() => {
+                                  if (!isAllSelected) {
+                                    setTempSelectedSubjects(prev => Array.from(new Set([...prev, ...catSubjects.map(s => s.name)])));
+                                  } else {
+                                    setTempSelectedSubjects(prev => prev.filter(name => !catSubjects.some(s => s.name === name)));
+                                  }
+                                }}>{category}</h4>
+                              </div>
+                              <div className="flex flex-col">
+                                {catSubjects.map(subjectData => (
+                                  <div key={subjectData.name} className={`flex items-center gap-3 p-2.5 cursor-pointer hover:bg-muted/30 border-b border-border/10 last:border-0 ${tempSelectedSubjects.includes(subjectData.name) ? 'bg-primary/5' : ''}`}>
+                                    <Checkbox checked={tempSelectedSubjects.includes(subjectData.name)} onCheckedChange={() => toggleTempSubject(subjectData.name)} />
+                                    <div className="flex-1 select-none" onClick={() => toggleTempSubject(subjectData.name)}>{subjectData.name} {subjectData.level && <span className="text-xs text-muted-foreground ml-1">({subjectData.level})</span>}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        });
+                    })()}
                   </div>
-                  <div className="grid gap-2 md:grid-cols-3">
-                    <Input placeholder="Add new subject (e.g. Further Mathematics)" value={newSubjectName} onChange={(e) => setNewSubjectName(e.target.value)} />
-                    <Button onClick={addNewSubjectAndSelect} disabled={isSubmitting || !newSubjectName.trim()}>Add & Select</Button>
-                    <div />
-                  </div>
+                  {!editingCompulsory ? (
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <Input placeholder="Add new subject (e.g. Further Mathematics)" value={newSubjectName} onChange={(e) => setNewSubjectName(e.target.value)} />
+                      <Button onClick={addNewSubjectAndSelect} disabled={isSubmitting || !newSubjectName.trim()}>Add & Select</Button>
+                    </div>
+                  ) : (
+                    <div className="flex justify-start">
+                      {tempSelectedSubjects.length > 1 && (
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          onClick={() => {
+                            const joined = tempSelectedSubjects.join(" OR ");
+                            setTempSelectedSubjects([joined]);
+                          }}
+                        >
+                          Join selected with OR
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => setIsReqSubjectsDialogOpen(false)}>Cancel</Button>
                     <Button onClick={saveReqSubjects}>Save {editingCompulsory ? "Compulsory Subjects" : "Group"}</Button>
@@ -1258,9 +1300,7 @@ export default function AdminPrograms() {
                               </Select>
                             </div>
                           )}
-                        </div>
-<<<<<<< HEAD
-
+                        </div>
                         {DIPLOMA_LIKE_TYPES.includes(req.qualification_type) ? (
                           /* Diploma-like: select from admin diploma list filtered by level */
                           <div className="space-y-2">
@@ -1313,38 +1353,6 @@ export default function AdminPrograms() {
                                   {filteredDiplomas.length === 0 && (
                                     <p className="text-xs text-muted-foreground italic p-2">No {req.qualification_type.toLowerCase()}s configured. Add them in the Diplomas module first with level "{req.qualification_type}".</p>
                                   )}
-=======
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <Label className="text-xs font-semibold">Alternative Subjects (OR Logic)</Label>
-                              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">Use this for requirements like "Mathematics OR Shona". Set 'At least 1' to enable OR logic.</p>
-                            </div>
-                            <Button type="button" size="sm" variant="outline" onClick={() => addSubjectGroup(idx)} className="h-7 text-xs">
-                              <Plus className="w-3 h-3 mr-1" /> Add Group
-                            </Button>
-                          </div>
-                          {((req as any).subject_groups || []).length === 0 ? (
-                            <p className="text-xs text-muted-foreground italic">No alternative groups. Add one to set alternative subject requirements.</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {((req as any).subject_groups || []).map((group: any, groupIdx: number) => (
-                                <div key={groupIdx} className="p-2 border rounded bg-muted/50 space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs font-medium">Group {groupIdx + 1}: At least {group.min_required} of {group.subjects?.length || 0} subjects</span>
-                                    <Button type="button" size="sm" variant="ghost" onClick={() => removeSubjectGroup(idx, groupIdx)} className="h-6 text-destructive">
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {(group.subjects || []).map((sub: string) => (
-                                      <Badge key={sub} variant="outline" className="text-xs">{sub}</Badge>
-                                    ))}
-                                  </div>
-                                  <Button type="button" size="sm" variant="outline" onClick={() => openReqSubjectsDialog(idx, groupIdx)} className="h-7 text-xs w-full">
-                                    Edit Group
-                                  </Button>
->>>>>>> b17f7b7 (Describe what changes you made)
                                 </div>
                               );
                             })()}
@@ -1371,13 +1379,16 @@ export default function AdminPrograms() {
                             </div>
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <Label className="text-xs font-semibold">Subject Groups (OR Logic)</Label>
+                                <div>
+                                  <Label className="text-xs font-semibold">Alternative Subjects (OR Logic)</Label>
+                                  <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">Use this for requirements like "Mathematics OR Shona". Set 'At least 1' to enable OR logic.</p>
+                                </div>
                                 <Button type="button" size="sm" variant="outline" onClick={() => addSubjectGroup(idx)} className="h-7 text-xs">
                                   <Plus className="w-3 h-3 mr-1" /> Add Group
                                 </Button>
                               </div>
                               {((req as any).subject_groups || []).length === 0 ? (
-                                <p className="text-xs text-muted-foreground italic">No subject groups. Add one to set alternative subject requirements.</p>
+                                <p className="text-xs text-muted-foreground italic">No alternative groups. Add one to set alternative subject requirements.</p>
                               ) : (
                                 <div className="space-y-2">
                                   {((req as any).subject_groups || []).map((group: any, groupIdx: number) => (

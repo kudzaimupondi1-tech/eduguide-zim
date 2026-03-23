@@ -40,17 +40,34 @@ export const StudentChatbot = () => {
   // Check if current route is a student route
   const isStudentRoute = STUDENT_ROUTES.some(route => location.pathname.startsWith(route));
 
-  // Check if chat is enabled by Admin
+  // Check if chat is enabled by Admin or blocked per-user
   useEffect(() => {
     const checkChatStatus = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        let userIsBlocked = false;
+        
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("chat_blocked")
+            .eq("user_id", session.user.id)
+            .single();
+            
+          if (profile?.chat_blocked) {
+            userIsBlocked = true;
+          }
+        }
+
         const { data } = await supabase
           .from("system_settings")
           .select("setting_value")
           .eq("setting_key", "chat_settings")
           .maybeSingle();
 
-        if (data?.setting_value && typeof (data.setting_value as any).enabled === "boolean") {
+        if (userIsBlocked) {
+          setIsChatEnabled(false);
+        } else if (data?.setting_value && typeof (data.setting_value as any).enabled === "boolean") {
           setIsChatEnabled((data.setting_value as any).enabled);
         }
       } catch (err) {
@@ -280,7 +297,7 @@ export const StudentChatbot = () => {
           </ScrollArea>
 
           {/* Quick Actions */}
-          {messages.length <= 2 && !isLoading && (
+          {messages.length <= 2 && !isLoading && isChatEnabled && (
             <div className="px-4 pb-2">
               <p className="text-xs text-muted-foreground mb-2">Quick questions:</p>
               <div className="grid grid-cols-2 gap-2">
@@ -314,15 +331,15 @@ export const StudentChatbot = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your question... (Enter to send)"
-                disabled={isLoading}
+                placeholder={isChatEnabled ? "Type your question... (Enter to send)" : "Chat is closed by the Admin"}
+                disabled={isLoading || !isChatEnabled}
                 className="flex-1 min-h-[44px] max-h-[120px] resize-none"
                 rows={1}
               />
               <Button
                 type="submit"
                 size="icon"
-                disabled={isLoading || !input.trim()}
+                disabled={isLoading || !input.trim() || !isChatEnabled}
                 className="h-[44px] w-[44px]"
               >
                 <Send className="w-4 h-4" />

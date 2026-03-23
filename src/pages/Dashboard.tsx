@@ -42,6 +42,7 @@ const Dashboard = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [favourites, setFavourites] = useState<FavouriteProgram[]>([]);
   const [showChat, setShowChat] = useState(false);
+  const [queriesEnabled, setQueriesEnabled] = useState(true);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
@@ -60,15 +61,12 @@ const Dashboard = () => {
     try {
       supabase.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("user_id", userId).then();
 
-      const [profileRes, subjectCountRes, announcementsRes, regularNotifsRes, favouritesRes, unreadMsgRes] = await Promise.all([
-        supabase.from("profiles").select("full_name").eq("user_id", userId).single(),
+      const [profileRes, subjectCountRes, announcementsRes, queriesSettingsRes, favouritesRes, unreadMsgRes] = await Promise.all([
+        supabase.from("profiles").select("full_name, chat_blocked").eq("user_id", userId).single(),
         supabase.from("student_subjects").select("*", { count: "exact", head: true }).eq("user_id", userId),
-        // Fetch all published announcements (they persist until expired)
         supabase.from("announcements").select("id, title, content, published_at, expires_at").eq("is_published", true),
-        // Fetch regular (non-announcement) notifications that are unread
-        supabase.from("student_notifications").select("*").eq("user_id", userId).eq("is_read", false).neq("notification_type", "announcement").order("created_at", { ascending: false }).limit(20),
+        supabase.from("system_settings").select("setting_value").eq("setting_key", "queries_settings").maybeSingle(),
         supabase.from("favourite_programs").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-        // Count only unread admin responses
         supabase.from("student_queries").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("status", "responded").eq("is_read_by_student", false),
       ]);
       setProfile(profileRes.data);
@@ -76,7 +74,13 @@ const Dashboard = () => {
       setFavourites((favouritesRes.data as any[]) || []);
       setUnreadMessages(unreadMsgRes.count || 0);
 
-      // Combine announcements + regular notifications
+      const isBlocked = !!profileRes.data?.chat_blocked;
+      if (isBlocked) {
+        setQueriesEnabled(false);
+      } else if (queriesSettingsRes.data?.setting_value && typeof (queriesSettingsRes.data.setting_value as any).enabled === "boolean") {
+        setQueriesEnabled((queriesSettingsRes.data.setting_value as any).enabled);
+      }
+
       const now = new Date();
       const announcementNotifs: Notification[] = (announcementsRes.data || [])
         .filter(a => !a.expires_at || new Date(a.expires_at) > now)
@@ -84,22 +88,13 @@ const Dashboard = () => {
           id: `ann-${a.id}`,
           title: `📢 ${a.title}`,
           message: a.content,
-          is_read: false, // Announcements always show
+          is_read: false,
           created_at: a.published_at || a.id,
           type: "announcement" as const,
           expires_at: a.expires_at,
         }));
 
-      const regularNotifs: Notification[] = (regularNotifsRes.data || []).map(n => ({
-        id: n.id,
-        title: n.title,
-        message: n.message,
-        is_read: n.is_read || false,
-        created_at: n.created_at,
-        type: "notification" as const,
-      }));
-
-      setNotifications([...announcementNotifs, ...regularNotifs]);
+      setNotifications(announcementNotifs);
     } catch (error) {
       console.error("Error fetching user data:", error);
     } finally {
@@ -177,56 +172,16 @@ const Dashboard = () => {
               </div>
             </Link>
             <div className="flex items-center gap-1">
-              {/* Query Chat Icon */}
-              <div className="relative">
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setShowChat(!showChat)}>
-                  <MessageSquare className="w-5 h-5" />
-                  {unreadMessages > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-green-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{unreadMessages}</span>
-                  )}
-                </Button>
-              </div>
-              {/* Notifications */}
-              <div className="relative">
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setShowNotifications(!showNotifications)}>
-                  <Bell className="w-5 h-5" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center font-bold">{unreadCount > 99 ? "99+" : unreadCount}</span>
-                  )}
-                </Button>
-                {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-card border border-border rounded-2xl shadow-lg z-50 overflow-hidden">
-                    <div className="p-4 border-b border-border bg-muted/30">
-                      <h3 className="font-bold text-sm text-foreground">Notifications</h3>
-                    </div>
-                    <div className="max-h-72 overflow-y-auto">
-                      {notifications.length === 0 ? (
-                        <div className="p-6 text-center text-muted-foreground text-sm">
-                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                          No new notifications
-                        </div>
-                      ) : notifications.map((n) => (
-                        <div key={n.id} className="p-4 border-b border-border/50 last:border-0 hover:bg-muted/40 transition-colors">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm text-foreground truncate">{n.title}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
-                              {n.type === "announcement" && n.expires_at && (
-                                <p className="text-[10px] text-muted-foreground/60 mt-1">
-                                  Expires: {new Date(n.expires_at).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0 rounded-lg" onClick={() => markNotificationRead(n)}>
-                              <X className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {queriesEnabled && (
+                <div className="relative">
+                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => setShowChat(!showChat)}>
+                    <MessageSquare className="w-5 h-5" />
+                    {unreadMessages > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-green-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">{unreadMessages}</span>
+                    )}
+                  </Button>
+                </div>
+              )}
               <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" asChild>
                 <Link to="/profile"><User className="w-5 h-5" /></Link>
               </Button>
@@ -239,6 +194,22 @@ const Dashboard = () => {
       </header>
 
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl">
+        {/* Announcements */}
+        {notifications.length > 0 && (
+          <section className="mb-8 space-y-3">
+            {notifications.map(ann => (
+              <div key={ann.id} className="p-4 rounded-xl bg-primary/10 border border-primary/20 flex flex-col gap-2 relative overflow-hidden">
+                 <div className="absolute top-0 left-0 w-1 sm:w-1.5 h-full bg-primary/60"></div>
+                 <h3 className="font-bold text-primary pl-1 sm:pl-2">{ann.title}</h3>
+                 <p className="text-sm text-foreground pl-1 sm:pl-2 leading-relaxed whitespace-pre-wrap">{ann.message}</p>
+                 {ann.expires_at && (
+                   <span className="text-[10px] sm:text-xs text-muted-foreground pl-1 sm:pl-2 font-medium">Expires {new Date(ann.expires_at).toLocaleDateString()}</span>
+                 )}
+              </div>
+            ))}
+          </section>
+        )}
+
         {/* Welcome */}
         <section className="mb-10">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground tracking-tight">
@@ -344,7 +315,7 @@ const Dashboard = () => {
       </main>
 
       {/* Chat Widget */}
-      {user && <StudentQueryChat userId={user.id} open={showChat} onClose={() => setShowChat(false)} onRead={handleChatRead} />}
+      {user && queriesEnabled && <StudentQueryChat userId={user.id} open={showChat} onClose={() => setShowChat(false)} onRead={handleChatRead} />}
     </div>
   );
     </PageTransition>

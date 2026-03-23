@@ -366,6 +366,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          chat_blocked: boolean | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -373,11 +374,15 @@ export type Database = {
           last_active_at: string | null
           phone: string | null
           recommendation_viewed_at: string | null
+          referral_reward_unlocked: boolean | null
+          referral_reward_used: boolean | null
+          referred_by: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          chat_blocked?: boolean | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -385,11 +390,15 @@ export type Database = {
           last_active_at?: string | null
           phone?: string | null
           recommendation_viewed_at?: string | null
+          referral_reward_unlocked?: boolean | null
+          referral_reward_used?: boolean | null
+          referred_by?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          chat_blocked?: boolean | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -397,6 +406,9 @@ export type Database = {
           last_active_at?: string | null
           phone?: string | null
           recommendation_viewed_at?: string | null
+          referral_reward_unlocked?: boolean | null
+          referral_reward_used?: boolean | null
+          referred_by?: string | null
           updated_at?: string
           user_id?: string
         }

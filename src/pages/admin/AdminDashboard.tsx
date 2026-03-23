@@ -27,7 +27,6 @@ interface Stats {
   careers: number;
   students: number;
   announcements: number;
-  deadlines: number;
 }
 
 interface UpcomingDeadline {
@@ -45,23 +44,19 @@ export default function AdminDashboard() {
     careers: 0,
     students: 0,
     announcements: 0,
-    deadlines: 0,
   });
-  const [upcomingDeadlines, setUpcomingDeadlines] = useState<UpcomingDeadline[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [universities, programs, subjects, careers, profiles, announcements, deadlines, upcomingDeadlinesRes] = await Promise.all([
+        const [universities, programs, subjects, careers, profiles, announcements] = await Promise.all([
           supabase.from("universities").select("id", { count: "exact", head: true }),
           supabase.from("programs").select("id", { count: "exact", head: true }),
           supabase.from("subjects").select("id", { count: "exact", head: true }),
           supabase.from("careers").select("id", { count: "exact", head: true }),
           supabase.from("profiles").select("id", { count: "exact", head: true }),
           supabase.from("announcements").select("id", { count: "exact", head: true }).eq("is_published", true),
-          supabase.from("deadlines").select("id", { count: "exact", head: true }).eq("is_active", true),
-          supabase.from("deadlines").select("id, title, deadline_date, deadline_type").eq("is_active", true).order("deadline_date", { ascending: true }).limit(5),
         ]);
 
         setStats({
@@ -71,10 +66,8 @@ export default function AdminDashboard() {
           careers: careers.count || 0,
           students: profiles.count || 0,
           announcements: announcements.count || 0,
-          deadlines: deadlines.count || 0,
         });
 
-        setUpcomingDeadlines(upcomingDeadlinesRes.data || []);
       } catch (error) {
         console.error("Error fetching stats:", error);
       } finally {
@@ -96,7 +89,6 @@ export default function AdminDashboard() {
   const quickActions = [
     { title: "AI Configuration", description: "Adjust recommendation weights", icon: Brain, href: "/admin/ai-config" },
     { title: "Announcements", description: `${stats.announcements} active`, icon: Megaphone, href: "/admin/announcements" },
-    { title: "Deadlines", description: `${stats.deadlines} upcoming`, icon: Calendar, href: "/admin/deadlines" },
     { title: "Analytics", description: "View system usage", icon: BarChart3, href: "/admin/analytics" },
   ];
 
@@ -165,43 +157,6 @@ export default function AdminDashboard() {
                   </Link>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Upcoming Deadlines */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-foreground flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Upcoming Deadlines
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {upcomingDeadlines.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No upcoming deadlines</p>
-              ) : (
-                <div className="space-y-3">
-                  {upcomingDeadlines.map((deadline) => {
-                    const daysInfo = getDaysUntil(deadline.deadline_date);
-                    return (
-                      <div key={deadline.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{deadline.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(deadline.deadline_date), "MMM d, yyyy")}
-                          </p>
-                        </div>
-                        <span className={`text-xs font-medium px-2 py-1 rounded ${daysInfo.urgent ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
-                          {daysInfo.text}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  <Button variant="outline" size="sm" className="w-full mt-2" asChild>
-                    <Link to="/admin/deadlines">Manage Deadlines</Link>
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

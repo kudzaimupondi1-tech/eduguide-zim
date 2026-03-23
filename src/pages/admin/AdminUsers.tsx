@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, UserCircle, Shield, Pencil, Trash2, Search, Plus } from "lucide-react";
@@ -39,6 +40,7 @@ interface Profile {
   phone: string | null;
   created_at: string;
   recommendation_viewed_at: string | null;
+  chat_blocked: boolean | null;
 }
 
 interface UserRole {
@@ -138,6 +140,30 @@ export default function AdminUsers() {
       toast({ title: "Error", description: "Failed to update profile", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleChatBlock = async (profileId: string, currentStatus: boolean | null) => {
+    try {
+      const newStatus = !currentStatus;
+      const { error } = await supabase
+        .from("profiles")
+        .update({ chat_blocked: newStatus })
+        .eq("id", profileId);
+
+      if (error) throw error;
+      
+      setProfiles(prev => prev.map(p => 
+        p.id === profileId ? { ...p, chat_blocked: newStatus } : p
+      ));
+      
+      toast({ 
+        title: "Success", 
+        description: `Chat access ${newStatus ? 'blocked' : 'restored'} for user` 
+      });
+    } catch (error) {
+      console.error("Error toggling chat block:", error);
+      toast({ title: "Error", description: "Failed to update chat access", variant: "destructive" });
     }
   };
 
@@ -306,6 +332,7 @@ export default function AdminUsers() {
                         <TableHead>Email</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>Roles</TableHead>
+                        <TableHead>Chat Access</TableHead>
                         <TableHead>Recommendations</TableHead>
                         <TableHead>Joined</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -352,6 +379,18 @@ export default function AdminUsers() {
                                 >
                                   <Plus className="w-3 h-3" />
                                 </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1 items-start">
+                                <Switch 
+                                  checked={!!profile.chat_blocked} 
+                                  onCheckedChange={() => handleToggleChatBlock(profile.id, profile.chat_blocked)}
+                                  title={profile.chat_blocked ? "Unblock Chat" : "Block Chat"}
+                                />
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                  {profile.chat_blocked ? "Blocked" : "Active"}
+                                </span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -428,6 +467,16 @@ export default function AdminUsers() {
                                   {role.role}
                                 </Badge>
                               ))}
+                            </div>
+                            <div className="mt-3 flex items-center justify-between gap-3 p-2 bg-muted/30 rounded-lg">
+                              <span className="text-xs font-medium text-foreground">Chat Access</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">{profile.chat_blocked ? "Blocked" : "Active"}</span>
+                                <Switch 
+                                  checked={!!profile.chat_blocked} 
+                                  onCheckedChange={() => handleToggleChatBlock(profile.id, profile.chat_blocked)}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
