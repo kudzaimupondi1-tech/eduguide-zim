@@ -1,0 +1,10 @@
+On branch main
+Your branch is up to date with 'new-origin/main'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.git-info.txt
+	git-log-clean.txt
+	git-status-clean.txt
+
+nothing added to commit but untracked files present (use "git add" to track)
